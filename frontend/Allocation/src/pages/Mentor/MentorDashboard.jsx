@@ -5,9 +5,10 @@ import AssignedProject from "./AssignedProject";
 import MentorMessage from "./MentorMessage";
 import Form3Mentor from "./Form3Mentor";
 import IdeaProject from "./IdeaProject";
+import Navbar from "../../components/Navbar";
 
 const MentorDashboard = () => {
-  const [section, setSection] = useState("dashboard"); // default
+  const [section, setSection] = useState("dashboard");
 
   const renderSection = () => {
     switch (section) {
@@ -15,14 +16,16 @@ const MentorDashboard = () => {
         return (
           <div>
             <h1 className="text-2xl font-bold mb-4">Mentor Dashboard</h1>
-            <p className="text-gray-600">Welcome to your dashboard. Use the side menu to navigate.</p>
+            <p className="text-gray-600">
+              Welcome to your dashboard. Use the side menu to navigate.
+            </p>
           </div>
         );
 
-      case "mentorIdeas": // project ideas section
-        return <IdeaProject/>;
+      case "mentorIdeas":
+        return <IdeaProject />;
 
-      case "mentorBankProjects": // assigned project / project bank
+      case "mentorBankProjects":
         return <AssignedProject />;
 
       case "documents":
@@ -32,7 +35,7 @@ const MentorDashboard = () => {
         return <MentorMessage />;
 
       case "form3Mentor":
-        return <Form3Mentor/>;
+        return <Form3Mentor />;
 
       default:
         return <p>Invalid section</p>;
@@ -40,12 +43,20 @@ const MentorDashboard = () => {
   };
 
   return (
-    <div className="flex min-h-screen bg-gray-100">
-      <SideMenu activeMenu={section} setSection={setSection} />
-      <div className="flex-1 p-6">{renderSection()}</div>
+    <div className="flex flex-col h-screen w-full bg-gray-100">
+      {/* ✅ TOP NAVBAR */}
+      <Navbar />
+
+      {/* ✅ SIDE MENU + CONTENT */}
+      <div className="flex flex-1 overflow-hidden">
+        <SideMenu activeMenu={section} setSection={setSection} />
+
+        <main className="flex-1 overflow-y-auto p-6">
+          {renderSection()}
+        </main>
+      </div>
     </div>
   );
 };
 
 export default MentorDashboard;
-

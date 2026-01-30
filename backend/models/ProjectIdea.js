@@ -45,10 +45,26 @@ const projectIdeaSchema = new Schema(
         feedback: {type: String},
       },
     ],
+    // ✅ Simplified checklist (created by Head, uploaded by Students)
+    checklist: [
+      {
+        title: { type: String, required: true },
+        studentUploads: [
+          {
+            student: { type: mongoose.Schema.Types.ObjectId, ref: "Student" },
+            fileUrl: { type: String },
+            uploadedAt: { type: Date, default: Date.now },
+            status: {
+              type: String,
+              enum: ["pending", "submitted"],
+              default: "pending",
+            },
+          },
+        ],
+      },
+    ],
   },
-  {
-    timestamps: true,
-  }
+  { timestamps: true }
 );
 
 const ProjectIdea = mongoose.model("ProjectIdea", projectIdeaSchema);

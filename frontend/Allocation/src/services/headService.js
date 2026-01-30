@@ -164,9 +164,117 @@ export const getMessages = async () => {
   return res.data?.data || [];
 };
 
-/* -------------------- FORM 3 MANAGEMENT -------------------- */
-// Head creates Form3 for all projects
-export const createForm3ForAllProjects = async (weeks) => {
-  const response = await api.post("/head/form3/create", { weeks });
-  return response.data;
+// ⭐ HEAD SIDE – CHECKLIST CONFIGURATION
+// ➕ Add Checklist Item
+export const addChecklistItem = async (data) => {
+  const res = await api.post(`/head/checklist`, data);
+  return res.data;
 };
+
+// 📜 Get All Checklist Items (Optional Academic Year Filter)
+export const getChecklistItems = async (academicYear) => {
+  const res = await api.get(`/head/getchecklist`, {
+    params: academicYear ? { academicYear } : {},
+  });
+  return res.data;
+};
+
+// ❌ Delete Checklist Item
+export const deleteChecklistItem = async (id) => {
+  const res = await api.delete(`/head/checklist/${id}`);
+  return res.data;
+};
+
+// 📂 Get All Student Checklist Submissions for a specific checklist item
+export const getAllStudentChecklistSubmissions = async (checklistItemId) => {
+  const res = await api.get(`/head/checklist/submissions`, {
+    params: { checklistItemId },
+  });
+  return res.data;
+};
+
+// 📊 Get all projects with checklist status
+export const getProjectsWithChecklist = async (academicYear) => {
+  const res = await api.get(`/head/projects-with-checklist`, {
+    params: academicYear ? { academicYear } : {},
+  });
+  return res.data;
+};
+
+// frontend service
+export const getAllProjectsCount = async () => {
+  const res = await api.get("/head/all-projects-count");
+  return res.data;
+};
+
+export const getUpcomingInterview = async () => {
+  const res = await api.get("/head/interview/upcoming");
+  return  res.data;
+};
+
+export const getNewProjectIdeaCount = async () => {
+  const res = await api.get("/head/new-ideas-count");
+  return res.data;
+};
+
+export const getHeadProfile = async () => {
+  const res = await api.get("/head/me");
+  return res.data;
+};
+
+// ------------------------------
+// 1️⃣ GET SUMMARY COUNTS
+// ------------------------------
+export const getSummaryCounts = async () => {
+  const res = await api.get("/head/dashboard/summary");
+  return res.data;
+};
+
+// ------------------------------
+// 2️⃣ GET ALL COMBINED PROJECTS
+// ------------------------------
+export const getAllCombinedProjects = async () => {
+  const res = await api.get("/head/dashboard/projects");
+  return res.data;   // returning only project list
+};
+
+export const getChecklistFilters = async () => {
+  const res = await api.get("head/checklist/filters");
+  return res.data;
+};
+
+export const getChecklistMetrics = async (filters = {}) => {
+  const res = await api.get("head/dashboard/checklist-metrics", {
+    params: filters,
+  });
+  return res.data;
+};
+
+export const createForm3ForAllProjects = async (academicYear, weeks) => {
+  if (!academicYear || !weeks?.length) {
+    throw new Error("Academic year and weeks are required");
+  }
+
+  const res = await api.post("/head/form3/create", {
+    academicYear,
+    weeks
+  });
+
+  return res.data;
+};
+
+export const getForm3 = async (academicYear) => {
+  const res = await api.get(`/head/form3/${academicYear}`);
+  return res.data;
+};
+
+export const deleteForm3 = async (academicYear, weekNumber) => {
+  const res = await api.delete(`/head/form3/${academicYear}/week/${weekNumber}`);
+  return res.data;
+};
+
+export const getTotalProjects = async () => ({ count: 0 });
+export const getTotalForms = async () => ({ count: 0 });
+export const getTotalSRS = async () => ({ count: 0 });
+export const getTotalMentors = async () => ({ count: 0 });
+export const getTotalTeams = async () => ({ count: 0 });

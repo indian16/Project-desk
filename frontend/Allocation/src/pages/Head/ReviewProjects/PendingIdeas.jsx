@@ -3,6 +3,7 @@ import {
   getPendingIdeasForHead,
   reviewIdeaByHead,
 } from "../../../services/headService";
+import { CheckCircle, XCircle, ChevronRight } from "lucide-react";
 
 const PendingIdeas = ({ academicYear }) => {
   const [ideas, setIdeas] = useState([]);
@@ -12,9 +13,7 @@ const PendingIdeas = ({ academicYear }) => {
   const [reason, setReason] = useState("");
 
   useEffect(() => {
-    if (academicYear) {
-      fetchIdeas();
-    }
+    if (academicYear) fetchIdeas();
   }, [academicYear]);
 
   const fetchIdeas = async () => {
@@ -43,7 +42,11 @@ const PendingIdeas = ({ academicYear }) => {
 
   const handleRejectConfirm = async () => {
     try {
-      await reviewIdeaByHead(currentIdeaId, "reject", reason || "No remarks provided");
+      await reviewIdeaByHead(
+        currentIdeaId,
+        "reject",
+        reason || "No remarks provided"
+      );
       setShowModal(false);
       setCurrentIdeaId(null);
       fetchIdeas();
@@ -57,60 +60,85 @@ const PendingIdeas = ({ academicYear }) => {
   };
 
   return (
-    <div className="p-4">
-      <h2 className="text-xl font-bold mb-4">
-        Pending Project Ideas ({academicYear})
-      </h2>
-      {ideas.length === 0 ? (
-        <p>No pending ideas</p>
-      ) : (
-        ideas.map((idea) => (
+    <div className="space-y-4">
+
+      {ideas.length === 0 && (
+        <div className="text-center py-20 text-gray-400 font-medium">
+          No pending project ideas
+        </div>
+      )}
+
+      {ideas.map((idea) => {
+        const isOpen = expanded[idea._id];
+
+        return (
           <div
             key={idea._id}
-            className="border rounded p-4 mb-3 shadow hover:shadow-md transition"
+            className={`
+              bg-white rounded-xl border
+              ${isOpen
+                ? "border-indigo-400 ring-1 ring-indigo-200 bg-indigo-50/30"
+                : "border-gray-200"}
+            `}
           >
-            {/* Title + Buttons Row */}
-            <div className="flex justify-between items-center">
-              <h3
+            {/* Header */}
+            <div className="flex justify-between items-center px-5 py-4">
+              <div
                 onClick={() => toggleExpand(idea._id)}
-                className="font-semibold text-lg cursor-pointer hover:text-blue-600"
+                className="flex items-center gap-3 cursor-pointer"
               >
-                {idea.title}
-              </h3>
+                <ChevronRight
+                  size={18}
+                  className={`text-gray-400 transition-transform ${
+                    isOpen ? "rotate-90 text-indigo-500" : ""
+                  }`}
+                />
+                <h3 className="font-semibold text-gray-800">
+                  {idea.title}
+                </h3>
+              </div>
+
+              {/* Actions */}
               <div className="flex gap-2">
                 <button
                   onClick={() => handleApprove(idea._id)}
-                  className="bg-green-500 text-white px-3 py-1 rounded hover:bg-green-600"
+                  className="flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-green-600 border border-green-200 rounded-lg hover:bg-green-50"
                 >
+                  <CheckCircle size={16} />
                   Approve
                 </button>
+
                 <button
                   onClick={() => handleRejectClick(idea._id)}
-                  className="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600"
+                  className="flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-red-600 border border-red-200 rounded-lg hover:bg-red-50"
                 >
+                  <XCircle size={16} />
                   Reject
                 </button>
               </div>
             </div>
 
-            {/* Expanded Details */}
-            {expanded[idea._id] && (
-              <div className="mt-3 text-gray-700">
+            {/* Details */}
+            {isOpen && (
+              <div className="px-6 pb-5 pt-3 text-sm text-gray-700 border-t border-gray-200 space-y-2">
                 <p>{idea.description}</p>
-                <p className="mt-2">
-                  <span className="font-medium">Technology:</span>{" "}
+
+                <p>
+                  <span className="font-medium text-gray-600">Technology:</span>{" "}
                   {idea.technology}
                 </p>
+
                 {idea.teamLead && (
-                  <p className="mt-1">
-                    <span className="font-medium">Team Lead:</span>{" "}
+                  <p>
+                    <span className="font-medium text-gray-600">Team Lead:</span>{" "}
                     {idea.teamLead.name} ({idea.teamLead.email})
                   </p>
                 )}
+
                 {idea.teamMembers?.length > 0 && (
-                  <div className="mt-2">
-                    <span className="font-medium">Team Members:</span>
-                    <ul className="list-disc list-inside text-sm text-gray-600">
+                  <div>
+                    <span className="font-medium text-gray-600">Team Members:</span>
+                    <ul className="list-disc list-inside text-gray-600 mt-1">
                       {idea.teamMembers.map((member) => (
                         <li key={member._id}>
                           {member.name} ({member.rollno})
@@ -122,33 +150,38 @@ const PendingIdeas = ({ academicYear }) => {
               </div>
             )}
           </div>
-        ))
-      )}
+        );
+      })}
 
       {/* Reject Modal */}
       {showModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-96 shadow-lg">
-            <h3 className="text-lg font-semibold mb-3">Reject Project Idea</h3>
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl w-[420px] shadow-xl p-6">
+            <h3 className="text-lg font-semibold text-gray-800 mb-2">
+              Reject Project Idea
+            </h3>
+
             <textarea
               value={reason}
               onChange={(e) => setReason(e.target.value)}
               placeholder="Enter rejection reason..."
-              className="w-full border rounded p-2 mb-4"
+              className="w-full border border-gray-300 rounded-lg p-3 text-sm"
               rows="4"
             />
-            <div className="flex justify-end gap-2">
+
+            <div className="flex justify-end gap-3 mt-5">
               <button
                 onClick={() => setShowModal(false)}
-                className="px-4 py-2 rounded bg-gray-300 hover:bg-gray-400"
+                className="px-4 py-2 rounded-lg bg-gray-100 hover:bg-gray-200"
               >
                 Cancel
               </button>
+
               <button
                 onClick={handleRejectConfirm}
-                className="px-4 py-2 rounded bg-red-500 text-white hover:bg-red-600"
+                className="px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700"
               >
-                Reject
+                Confirm Reject
               </button>
             </div>
           </div>
@@ -159,4 +192,3 @@ const PendingIdeas = ({ academicYear }) => {
 };
 
 export default PendingIdeas;
-

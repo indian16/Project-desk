@@ -11,6 +11,10 @@ const AssignedProject = require("../models/AssignedProject");
 const Student = require("../models/Student");
 const Message = require("../models/Message");
 const bcrypt = require("bcryptjs");
+const Checklist = require("../models/Checklist");
+const StudentChecklist = require("../models/StudentChecklist");
+const Form3 = require("../models/Form3")
+
 
 // ✅ Get all available academic years
 const getAvailableYears = async (req, res) => {
@@ -470,7 +474,6 @@ const sendMessage = async (req, res) => {
   }
 };
 
-
 const getMessages = async (req, res) => {
   try {
     const userId = req.user.id;
@@ -497,97 +500,442 @@ const getMessages = async (req, res) => {
   }
 };
 
+// ✅ Add a new checklist item (Head only)
+const addChecklistItem = async (req, res) => {
+  try {
+    const { title } = req.body;
+
+    if (!title) {
+      return res.status(400).json({ success: false, message: "Title is required" });
+    }
+
+    const newItem = new Checklist({
+      title,
+      createdBy: req.user._id, // head ID from auth
+      studentUploads: [] // students will fill this later
+    });
+
+    await newItem.save();
+
+    res.status(201).json({
+      success: true,
+      message: "Checklist item added successfully",
+      item: newItem
+    });
+
+  } catch (error) {
+    console.error("Add Checklist Error:", error);
+    res.status(500).json({ success: false, message: "Server error while adding checklist item" });
+  }
+};
+
+// ✅ Get all checklist items (filter by year optional)
+const getChecklistItems = async (req, res) => {
+  try {
+    const items = await Checklist.find().sort({ createdAt: -1 });
+
+    res.status(200).json({ success: true, items });
+  } catch (error) {
+    console.error("Get Checklist Error:", error);
+    res.status(500).json({ success: false, message: "Server error while fetching checklist items" });
+  }
+};
+
+// ✅ Delete a checklist item
+const deleteChecklistItem = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const item = await Checklist.findById(id);
+    if (!item) {
+      return res.status(404).json({ success: false, message: "Checklist item not found" });
+    }
+
+    await item.deleteOne();
+
+    res.status(200).json({ success: true, message: "Checklist item deleted successfully" });
+
+  } catch (error) {
+    console.error("Delete Checklist Error:", error);
+    res.status(500).json({ success: false, message: "Server error while deleting checklist item" });
+  }
+};
+
 const createForm3ForAllProjects = async (req, res) => {
   try {
-    const { weeks } = req.body;
+    const { academicYear, weeks } = req.body;
 
-    if (!weeks || weeks.length === 0) {
-      return res.status(400).json({ message: "Weeks (dates) are required" });
+    if (!academicYear || !weeks?.length) {
+      return res.status(400).json({ message: "Academic year & weeks required" });
     }
 
-    const formsCreated = [];
-
-    // --------- 1️⃣ Handle ProjectIdea ---------
-    const projectIdeas = await ProjectIdea.find().populate("teamMembers teamLead");
-
-    for (const project of projectIdeas) {
-      const allStudents = [];
-
-      // Add team members
-      if (project.teamMembers && project.teamMembers.length > 0) {
-        allStudents.push(...project.teamMembers);
-      }
-
-      // Add team lead if not already included
-      if (project.teamLead && !allStudents.find(s => s._id.equals(project.teamLead._id))) {
-        allStudents.push(project.teamLead);
-      }
-
-      for (const student of allStudents) {
-        if (!student || !student._id) continue; // skip invalid
-
-        const exists = await Form3.findOne({ projectId: project._id, studentId: student._id });
-        if (exists) continue;
-
-        const form3 = new Form3({
-          projectId: project._id,
-          projectType: "ProjectIdea",
-          studentId: student._id,
-          weeks: weeks.map((w, i) => ({
-            weekNumber: w.weekNumber || i + 1,
-            fromDate: w.fromDate,
-            toDate: w.toDate,
-          })),
-        });
-
-        await form3.save();
-        formsCreated.push(form3);
-      }
+    const existing = await Form3.findOne({ academicYear });
+    if (existing) {
+      existing.weeks = weeks;
+      await existing.save();
+      return res.json({ message: "Form3 updated globally", form3: existing });
     }
 
-    // --------- 2️⃣ Handle AssignedProject ---------
-    const assignedProjects = await AssignedProject.find().populate("teamMembers teamLead");
+    const form3 = await Form3.create({ academicYear, weeks });
 
-    for (const project of assignedProjects) {
-      const allStudents = [];
-
-      if (project.teamMembers && project.teamMembers.length > 0) {
-        allStudents.push(...project.teamMembers);
-      }
-
-      if (project.teamLead && !allStudents.find(s => s._id.equals(project.teamLead._id))) {
-        allStudents.push(project.teamLead);
-      }
-
-      for (const student of allStudents) {
-        if (!student || !student._id) continue;
-
-        const exists = await Form3.findOne({ projectId: project._id, studentId: student._id });
-        if (exists) continue;
-
-        const form3 = new Form3({
-          projectId: project._id,
-          projectType: "AssignedProject",
-          studentId: student._id,
-          weeks: weeks.map((w, i) => ({
-            weekNumber: w.weekNumber || i + 1,
-            fromDate: w.fromDate,
-            toDate: w.toDate,
-          })),
-        });
-
-        await form3.save();
-        formsCreated.push(form3);
-      }
-    }
-
-    return res.status(201).json({
-      message: `✅ Form3 created for ${formsCreated.length} students`,
-      forms: formsCreated,
+    res.json({
+      message: "Form3 created globally",
+      form3,
     });
   } catch (err) {
-    console.error("Error creating Form3:", err);
-    return res.status(500).json({ message: "Server error", error: err.message });
+    console.error(err);
+    res.status(500).json({ message: "Failed to create Form3" });
+  }
+};
+
+const getForm3 = async (req, res) => {
+  try {
+    const { academicYear } = req.params;
+    if (!academicYear) return res.status(400).json({ message: "Academic year required" });
+
+    const form3 = await Form3.findOne({ academicYear });
+    if (!form3) return res.status(404).json({ message: "Form3 not found for this year" });
+
+    res.status(200).json(form3);
+  } catch (err) {
+    console.error("Error fetching Form3 by year:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+const deleteForm3 = async (req, res) => {
+  try {
+    const { academicYear, weekNumber } = req.params;
+    const weekNum = parseInt(weekNumber);
+    if (isNaN(weekNum)) return res.status(400).json({ message: "Invalid week number" });
+
+    const form3 = await Form3.findOne({ academicYear });
+    if (!form3) return res.status(404).json({ message: "Form3 not found" });
+
+    // Remove the week
+    form3.weeks = form3.weeks.filter(w => w.weekNumber !== weekNum);
+
+    // Re-number remaining weeks
+    form3.weeks = form3.weeks.map((w, index) => ({ ...w.toObject(), weekNumber: index + 1 }));
+
+    await form3.save();
+    res.status(200).json({ message: `Week ${weekNum} removed successfully`, form3 });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Server error deleting week" });
+  }
+};
+
+const getAllStudentChecklistSubmissions = async (req, res) => {
+  try {
+    const submissions = await StudentChecklist.find()
+      .populate("student", "name email rollno")
+      .populate("projectId");
+
+    res.status(200).json({ success: true, submissions });
+
+  } catch (error) {
+    console.error("Fetch Submissions Error:", error);
+    res.status(500).json({ success: false, message: "Server error while fetching submissions" });
+  }
+};
+
+// GET /api/head/projects-with-checklist
+const getProjectsWithChecklist = async (req, res) => {
+  try {
+
+    // Fetch both project types
+    const bankProjects = await ProjectBank.find()
+      .populate("mentor", "name email")
+      .populate("teamMembers", "name email");
+
+    const ideaProjects = await ProjectIdea.find()
+      .populate("mentor", "name email")
+      .populate("teamMembers", "name email")
+      .populate("teamLead", "name email");
+
+    const allProjects = [...bankProjects, ...ideaProjects];
+
+    // Add checklist + student uploads for each project
+    const projectsWithChecklist = await Promise.all(
+      allProjects.map(async (proj) => {
+        const checklistItems = await Checklist.find();
+
+        const checklistWithUploads = await Promise.all(
+          checklistItems.map(async (item) => {
+            const studentUploads = item.studentUploads.filter(
+              (u) => String(u.project) === String(proj._id)
+            );
+
+            return {
+              ...item.toObject(),
+              studentUploads
+            };
+          })
+        );
+
+        return {
+          ...proj.toObject(),
+          checklist: checklistWithUploads
+        };
+      })
+    );
+
+    res.status(200).json({
+      success: true,
+      projects: projectsWithChecklist
+    });
+
+  } catch (error) {
+    console.error("Error fetching projects with checklist:", error);
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+};
+
+// frontend  function start here
+const getAllProjectsCount = async (req, res) => {
+  try {
+    const ideaCount = await ProjectIdea.countDocuments();
+    const assignedCount = await AssignedProject.countDocuments();
+    const total = ideaCount + assignedCount;
+
+    res.json({ ideaCount, assignedCount, total });
+  } catch (err) {
+    console.error("Error fetching project counts:", err);
+    res.status(500).json({ message: "Server Error" });
+  }
+};
+
+const getUpcomingInterview = async (req, res) => {
+  try {
+    // Fetch only interviews that have valid idea reference
+    const upcoming = await Interview.findOne({
+      
+    })
+      .sort({ date: 1 })
+      .lean();
+
+    if (!upcoming) {
+      return res.status(200).json(null);
+    }
+
+    // Fetch project idea details
+    const idea = await ProjectIdea.findById(upcoming.idea)
+      
+      .lean();
+
+    return res.status(200).json({
+      _id: upcoming._id,
+      date: upcoming.date,
+      time: upcoming.time,
+      location: upcoming.location,
+      notes: upcoming.notes,
+
+      idea: idea
+        ? {
+            title: idea.title,
+            description: idea.description,
+            technology: idea.technology,
+            teamLead: idea.teamLead,
+            teamMembers: idea.teamMembers,
+          }
+        : null,
+    });
+  } catch (err) {
+    console.error("Error in getUpcomingInterview:", err);
+    return res.status(500).json({ error: "Server error" });
+  }
+}
+
+// Count how many new project ideas are submitted
+const getNewProjectIdeaCount = async (req, res) => {
+  try {
+    const count = await ProjectIdea.countDocuments({ status: "pending" });
+
+    return res.status(200).json({
+      success: true,
+      newIdeaCount: count,
+    });
+  } catch (error) {
+    console.error("Error counting new ideas:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Internal Server Error",
+    });
+  }
+};
+
+// ======================================
+// 1️⃣ SUMMARY COUNTS
+// ======================================
+const getSummaryCounts = async (req, res) => {
+  try {
+    const totalIdeas = await ProjectIdea.countDocuments();
+    const totalAssigned = await AssignedProject.countDocuments();
+
+    return res.json({
+      success: true,
+      counts: {
+        totalIdeas,
+        totalAssigned,
+      }
+    });
+
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// ======================================
+// 2️⃣ COMBINED PROJECTS (IDEA + ASSIGNED)
+// ======================================
+const getAllProjectsCombined = async (req, res) => {
+  try {
+
+    // ===========================
+    // FETCH PROJECT IDEAS
+    // ===========================
+    const ideas = await ProjectIdea.find()
+      .populate("mentor")
+      .populate("teamMembers");
+
+    const formattedIdeas = ideas.map(i => ({
+      type: "idea",
+      id: i._id,
+      title: i.title,
+      description: i.description,
+      technology: i.technology,
+      status: i.status,
+      teamLead: i.teamLead,
+      teamMembers: i.teamMembers,
+      mentor: i.mentor,
+      academicYear: i.academicYear,
+      branch: i.branch,
+      section: i.section,
+      group: i.group
+    }));
+
+
+    // ===========================
+    // FETCH ASSIGNED PROJECTS
+    // ===========================
+    const assigned = await AssignedProject.find()
+      .populate("teamMembers")
+      .populate("selectedMentor")
+      .populate("approvedMentor");
+
+    const formattedAssigned = assigned.map(a => ({
+      type: "assigned",
+      id: a._id,
+      title: a.title,
+      description: a.description,
+      technology: a.technology,
+      status: a.status,
+      teamLead: a.teamLead,
+      teamMembers: a.teamMembers,
+      selectedMentor: a.selectedMentor,
+      approvedMentor: a.approvedMentor,
+      academicYear: a.academicYear,
+      branch: a.branch,
+      section: a.section,
+      group: a.group
+    }));
+
+
+    // ===========================
+    // MERGE BOTH LISTS
+    // ===========================
+    const allProjects = [
+      ...formattedIdeas,
+      ...formattedAssigned
+    ];
+
+    return res.json({
+      success: true,
+      total: allProjects.length,
+      projects: allProjects
+    });
+
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+
+const getChecklistMetrics = async (req, res) => {
+  try {
+    const { branch, section, group } = req.query;
+
+    // 🔒 Hierarchy validation (DOES NOT AFFECT DEFAULT CASE)
+    if (section && !branch) {
+      return res.status(400).json({
+        success: false,
+        message: "Section requires branch",
+      });
+    }
+
+    if (group && (!branch || !section)) {
+      return res.status(400).json({
+        success: false,
+        message: "Group requires branch and section",
+      });
+    }
+
+    // 🧠 Build filter ONLY if filters exist
+    const filter = {};
+    if (branch) filter.branch = branch;
+    if (section) filter.section = section;
+    if (group) filter.group = group;
+
+    // 📋 All checklist items (same as before)
+    const checklistItems = await Checklist.find().lean();
+
+    // 📊 Count uploads per checklist (filtered or not)
+    const counts = await Promise.all(
+      checklistItems.map(async (item) => {
+        const uploadedCount = await StudentChecklist.countDocuments({
+          checklistItem: item._id.toString(),
+          ...filter, // 👈 THIS LINE IS THE ONLY CHANGE
+        });
+
+        return {
+          _id: item._id,
+          title: item.title,
+          uploadedCount, // 👈 unchanged
+        };
+      })
+    );
+
+    return res.status(200).json({
+      success: true,
+      data: counts, // 👈 unchanged
+    });
+  } catch (error) {
+    console.error("Error fetching checklist counts:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Server error",
+    });
+  }
+};
+
+const getChecklistFilters = async (req, res) => {
+  try {
+    const branches = await StudentChecklist.distinct("branch");
+    const sections = await StudentChecklist.distinct("section");
+    const groups = await StudentChecklist.distinct("group");
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        branches: branches.filter(Boolean),
+        sections: sections.filter(Boolean),
+        groups: groups.filter(Boolean),
+      },
+    });
+  } catch (err) {
+    console.error("Filter fetch error:", err);
+    res.status(500).json({ success: false });
   }
 };
 
@@ -610,6 +958,19 @@ module.exports = {
   reviewInterview,
   sendMessage,
   getMessages,
+  addChecklistItem,
+  getChecklistItems,
+  deleteChecklistItem,
   createForm3ForAllProjects,
+  getForm3,
+  deleteForm3,
+  getAllStudentChecklistSubmissions,
+  getProjectsWithChecklist,
+  getAllProjectsCount,
+  getUpcomingInterview,
+  getNewProjectIdeaCount,
+  getSummaryCounts,
+  getAllProjectsCombined,
+  getChecklistMetrics,
+  getChecklistFilters,
 };
-

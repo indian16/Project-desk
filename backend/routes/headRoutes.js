@@ -22,7 +22,21 @@ const {
   reviewInterview,
   sendMessage,
   getMessages,
-  createForm3ForAllProjects
+  createForm3ForAllProjects,
+  getForm3,
+  deleteForm3,
+  addChecklistItem,
+  getChecklistItems,
+  deleteChecklistItem,
+  getAllStudentChecklistSubmissions,
+  getProjectsWithChecklist,
+  getAllProjectsCount,
+  getUpcomingInterview,
+  getNewProjectIdeaCount,
+  getSummaryCounts,
+  getAllProjectsCombined,
+  getChecklistMetrics,
+  getChecklistFilters,
 } = require("../controllers/headController");
 const upload = multer({ dest: "uploads/" });
 
@@ -54,12 +68,39 @@ router.put("/idea-interview/:id", scheduleInterview);
 router.get("/idea-scheduled-interviews", getAllInterviews);
 router.put("/idea-review-interview/:id", reviewInterview);
 
-
 // Message management
 router.post("/message/send", sendMessage);
 router.get("/message/get", getMessages);
 
 //Form 3
 router.post("/form3/create", createForm3ForAllProjects);
+router.get("/form3/:academicYear", getForm3);
+router.delete("/form3/:academicYear/week/:weekNumber", deleteForm3);
+
+// Checklist management
+router.post("/checklist", addChecklistItem);
+router.get("/getchecklist", getChecklistItems);
+router.delete("/checklist/:id", deleteChecklistItem);
+router.get("/checklist/submissions", getAllStudentChecklistSubmissions);
+router.get("/projects-with-checklist",verifyToken,checkRole(["head"]),getProjectsWithChecklist);
+
+//frontend routes
+router.get("/all-projects-count", getAllProjectsCount);
+router.get("/interview/upcoming", getUpcomingInterview);
+router.get("/new-ideas-count", getNewProjectIdeaCount);
+
+router.get("/me", verifyToken, checkRole(["head"]), (req, res) => {
+  const { name, email, role } = req.user; // coming directly from token
+  res.json({ name, email, role });
+});
+
+// Summary counts
+router.get("/dashboard/summary", getSummaryCounts);
+
+// All projects (ideas + assigned)
+router.get("/dashboard/projects", getAllProjectsCombined);
+
+router.get("/dashboard/checklist-metrics", getChecklistMetrics);
+router.get("/checklist/filters",getChecklistFilters);
 
 module.exports = router;

@@ -44,7 +44,6 @@ const ScheduleInterview = () => {
     try {
       await scheduleInterview(ideaId, interviewDetails);
 
-      // Update idea status locally
       setIdeas((prev) =>
         prev.map((idea) =>
           idea._id === ideaId
@@ -65,8 +64,10 @@ const ScheduleInterview = () => {
   };
 
   return (
-    <div className="p-6">
-      <h2 className="text-2xl font-semibold mb-4">Accepted Project Ideas</h2>
+    <div className="p-6 max-w-6xl">
+      <h2 className="text-2xl font-semibold text-gray-800 mb-6">
+        Accepted Project Ideas
+      </h2>
 
       {ideas.length === 0 && (
         <p className="text-gray-500">No accepted ideas available.</p>
@@ -80,104 +81,133 @@ const ScheduleInterview = () => {
           return (
             <div
               key={idea._id}
-              className={`p-4 border rounded-lg shadow-sm transition 
-                         ${
-                           isSelected
-                             ? "border-blue-500 bg-blue-50"
-                             : "hover:shadow-md hover:bg-gray-50"
-                         }
-                         ${
-                           isScheduled
-                             ? "opacity-50 cursor-not-allowed"
-                             : "cursor-pointer"
-                         }`}
               onClick={() =>
                 !isScheduled && setSelectedIdeaId(isSelected ? null : idea._id)
               }
+              className={`relative rounded-lg border transition-all duration-200 
+                ${
+                  isSelected
+                    ? "border-blue-500 ring-1 ring-blue-200 bg-blue-50/40"
+                    : "border-gray-200 bg-white hover:border-gray-300"
+                }
+                ${
+                  isScheduled
+                    ? "opacity-50 cursor-not-allowed"
+                    : "cursor-pointer"
+                }
+              `}
             >
-              <div className="flex justify-between items-center">
+              {/* LEFT ACCENT BAR */}
+              {isSelected && (
+                <span className="absolute left-0 top-0 h-full w-1 bg-blue-500 rounded-l-lg" />
+              )}
+
+              {/* HEADER */}
+              <div className="p-4 flex justify-between items-start">
                 <div>
-                  <h3 className="text-lg font-bold text-blue-600 hover:underline">
+                  <h3 className="text-lg font-semibold text-gray-800">
                     {idea.title}
                   </h3>
-                  <p className="text-gray-700">
-                    Team Lead: {idea.teamLead?.name || "N/A"}
+                  <p className="text-sm text-gray-600 mt-1">
+                    Team Lead:{" "}
+                    <span className="font-medium">
+                      {idea.teamLead?.name || "N/A"}
+                    </span>
                   </p>
-                  <p className="text-gray-600">
-                    Description: {idea.description || "N/A"}
+                  <p className="text-sm text-gray-500 mt-2 line-clamp-2">
+                    {idea.description || "No description provided"}
                   </p>
                 </div>
+
                 {isScheduled && (
-                  <span className="ml-2 px-2 py-1 text-xs bg-green-200 text-green-800 rounded">
-                    Scheduled
+                  <span className="text-xs font-medium px-3 py-1 rounded-full bg-green-100 text-green-700">
+                    Interview Scheduled
                   </span>
                 )}
               </div>
 
+              {/* FORM SECTION */}
               {isSelected && !isScheduled && (
                 <div
-                  className="mt-4 p-4 border-t border-gray-200 bg-white rounded-md shadow-inner"
-                  onClick={(e) => e.stopPropagation()} // Prevent collapsing when interacting with form
+                  className="border-t bg-white px-6 py-5"
+                  onClick={(e) => e.stopPropagation()}
                 >
-                  <h4 className="text-md font-semibold mb-2">
+                  <h4 className="text-md font-semibold text-gray-700 mb-4">
                     Schedule Interview
                   </h4>
+
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-gray-700">Date</label>
+                      <label className="text-sm font-medium text-gray-600">
+                        Date
+                      </label>
                       <input
                         type="date"
                         name="date"
                         value={interviewDetails.date}
                         onChange={handleChange}
-                        className="mt-1 block w-full border rounded-md p-2"
-                        min={new Date().toISOString().split("T")[0]} // <-- prevents past dates
+                        min={new Date().toISOString().split("T")[0]}
+                        className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 focus:border-blue-500 focus:ring-1 focus:ring-blue-200 outline-none"
                       />
                     </div>
+
                     <div>
-                      <label className="block text-gray-700">Time</label>
+                      <label className="text-sm font-medium text-gray-600">
+                        Time
+                      </label>
                       <input
                         type="time"
                         name="time"
                         value={interviewDetails.time}
                         onChange={handleChange}
-                        className="mt-1 block w-full border rounded-md p-2"
+                        className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 focus:border-blue-500 focus:ring-1 focus:ring-blue-200 outline-none"
                       />
                     </div>
+
                     <div>
-                      <label className="block text-gray-700">Location</label>
+                      <label className="text-sm font-medium text-gray-600">
+                        Location
+                      </label>
                       <input
                         type="text"
                         name="location"
-                        placeholder="Interview Location"
+                        placeholder="Interview room / Online link"
                         value={interviewDetails.location}
                         onChange={handleChange}
-                        className="mt-1 block w-full border rounded-md p-2"
+                        className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 focus:border-blue-500 focus:ring-1 focus:ring-blue-200 outline-none"
                       />
                     </div>
+
                     <div>
-                      <label className="block text-gray-700">Notes</label>
+                      <label className="text-sm font-medium text-gray-600">
+                        Notes
+                      </label>
                       <textarea
                         name="notes"
-                        placeholder="Additional notes"
                         value={interviewDetails.notes}
                         onChange={handleChange}
-                        className="mt-1 block w-full border rounded-md p-2 h-24"
+                        rows={3}
+                        placeholder="Optional notes"
+                        className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 focus:border-blue-500 focus:ring-1 focus:ring-blue-200 outline-none resize-none"
                       />
                     </div>
                   </div>
-                  <button
-                    onClick={() => handleSchedule(idea._id)}
-                    disabled={loading}
-                    className={`mt-4 px-6 py-2 rounded-md transition 
-                                ${
-                                  loading
-                                    ? "bg-gray-400 cursor-not-allowed"
-                                    : "bg-blue-600 text-white hover:bg-blue-700"
-                                }`}
-                  >
-                    {loading ? "Scheduling..." : "Schedule Interview"}
-                  </button>
+
+                  <div className="mt-5 flex justify-end">
+                    <button
+                      onClick={() => handleSchedule(idea._id)}
+                      disabled={loading}
+                      className={`px-6 py-2 rounded-md text-sm font-medium transition
+                        ${
+                          loading
+                            ? "bg-gray-300 cursor-not-allowed"
+                            : "bg-blue-600 text-white hover:bg-blue-700"
+                        }
+                      `}
+                    >
+                      {loading ? "Scheduling..." : "Confirm Schedule"}
+                    </button>
+                  </div>
                 </div>
               )}
             </div>

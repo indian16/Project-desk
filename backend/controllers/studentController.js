@@ -4,16 +4,27 @@ const ProjectIdea = require("../models/ProjectIdea");
 const Mentor = require("../models/Mentor");
 const Document = require("../models/Document");
 const path = require("path");
+const Checklist = require("../models/Checklist");
+const StudentChecklist = require("../models/StudentChecklist");
+const fs = require("fs");
+const Form1 = require("../models/Form1");
+const Form2 = require("../models/Form2");
+const Form3 = require("../models/Form3");
+const StudentForm3 = require("../models/StudentForm3");
 
 const submitProjectIdeaForm = async (req, res) => {
   try {
-    const { projectId, title, description, technology, teamMembers, mentor } = req.body;
+    const { projectId, title, description, technology, teamMembers, mentor } =
+      req.body;
     const userId = req.user._id || req.user.id;
 
     if (projectId && mentor) {
       // ✅ Update mentor only
       const project = await ProjectIdea.findById(projectId);
-      if (!project) return res.status(404).json({ success: false, message: "Project not found" });
+      if (!project)
+        return res
+          .status(404)
+          .json({ success: false, message: "Project not found" });
 
       project.mentor = mentor;
       await project.save();
@@ -29,7 +40,8 @@ const submitProjectIdeaForm = async (req, res) => {
     if (!title || !description || !technology || !teamMembers) {
       return res.status(400).json({
         success: false,
-        message: "Title, description, technology, and team members are required",
+        message:
+          "Title, description, technology, and team members are required",
       });
     }
 
@@ -86,7 +98,14 @@ const submitProjectIdeaForm = async (req, res) => {
 // ✅ Submit project from Project Bank
 const submitProjectBankForm = async (req, res) => {
   try {
-    const { projectId, title, description, technology, selectedMentor, teamMembers } = req.body;
+    const {
+      projectId,
+      title,
+      description,
+      technology,
+      selectedMentor,
+      teamMembers,
+    } = req.body;
     const userId = req.user._id || req.user.id;
 
     const existingIdea = await ProjectIdea.findOne({
@@ -150,13 +169,19 @@ const getMyIdeaProject = async (req, res) => {
       .populate("teamLead.id", "name email"); // populate lead student info
 
     if (!projectIdea) {
-      return res.status(200).json({success: true,projectIdea: null,message: "No project idea submitted yet",});
+      return res
+        .status(200)
+        .json({
+          success: true,
+          projectIdea: null,
+          message: "No project idea submitted yet",
+        });
     }
 
-    res.status(200).json({success: true,projectIdea,});
+    res.status(200).json({ success: true, projectIdea });
   } catch (error) {
     console.error("Get My Idea Project Error:", error);
-    res.status(500).json({success: false,message: "Server error",});
+    res.status(500).json({ success: false, message: "Server error" });
   }
 };
 
@@ -210,10 +235,10 @@ const getMyAssignedProject = async (req, res) => {
       .populate("student", "name email");
 
     if (!project) {
-      return res.status(200).json({ 
-        success: true, 
-        project: null, 
-        message: "No assigned project yet" 
+      return res.status(200).json({
+        success: true,
+        project: null,
+        message: "No assigned project yet",
       });
     }
 
@@ -224,11 +249,12 @@ const getMyAssignedProject = async (req, res) => {
   }
 };
 
-
 // ✅ Get project bank filtered by academicYear
 const getProjectBankList = async (req, res) => {
   try {
-    const projects = await ProjectBank.find({ academicYear: req.user.academicYear }).sort({ title: 1 });
+    const projects = await ProjectBank.find({
+      academicYear: req.user.academicYear,
+    }).sort({ title: 1 });
     res.status(200).json({ success: true, projects });
   } catch (error) {
     console.error("Get Project Bank Error:", error);
@@ -268,75 +294,541 @@ const downloadDocument = async (req, res) => {
     res.download(path.resolve(doc.filePath), doc.fileName);
   } catch (error) {
     console.error("Download Document Error:", error);
-    res.status(500).json({ message: "Server error while downloading document" });
+    res
+      .status(500)
+      .json({ message: "Server error while downloading document" });
   }
 };
 
-const getMyForm3 = async (req, res) => {
+const getChecklist = async (req, res) => {
   try {
     const studentId = req.user.id;
-    console.log("Fetching Form3 for studentId:", studentId);
 
-    const form3 = await Form3.findOne({ studentId }).populate("projectId");
+    const project =
+      (await ProjectIdea.findOne({
+        $or: [{ "teamLead.id": studentId }, { teamMembers: studentId }],
+      })) ||
+      (await AssignedProject.findOne({
+        $or: [{ student: studentId }, { teamMembers: studentId }],
+      }));
 
-    console.log("Fetched form3:", form3);
+    if (!project) {
+      return res.status(404).json({
+        success: false,
+        message: "No project found",
+      });
+    }
 
-    if (!form3) return res.status(404).json({ message: "No Form3 found for you yet." });
+    const globalChecklist = await Checklist.find().sort({ createdAt: 1 });
 
-        // Ensure each week has mentorMarks field
-        form3.weeks = form3.weeks.map(week => ({
-          ...week.toObject(),       // convert mongoose doc to plain object
-          mentorMarks: week.mentorMarks ?? null
-        }));
-    
+    const studentUploads = await StudentChecklist.find({
+      student: studentId,
+      projectId: project._id.toString(),
+    });
 
-    res.json(form3);
-  } catch (err) {
-    console.error("Error in getMyForm3:", err);
-    res.status(500).json({ message: "Error fetching Form3", error: err.message });
+    const merged = globalChecklist.map((item) => {
+      const uploaded = studentUploads.find(
+        (u) => String(u.checklistItem) === String(item._id),
+      );
+
+      return {
+        title: item.title,
+        checklistId: item._id.toString(),
+        status: uploaded ? "submitted" : "pending",
+        fileUrl: uploaded?.filePath || null,
+        fileName: uploaded?.fileName || null,
+        uploadedAt: uploaded?.uploadedAt || null,
+      };
+    });
+
+    res.status(200).json({
+      success: true,
+      checklist: merged,
+      title: project.title,
+      projectId: project._id.toString(),
+    });
+  } catch (error) {
+    console.error("Get Checklist Error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Server error while fetching checklist",
+    });
   }
 };
 
-const updateForm3Week = async (req, res) => {
+const uploadChecklistFile = async (req, res) => {
   try {
-    const { form3Id, weekNumber } = req.params;
-    const { functionality, progress, taskDetails } = req.body;
+    const studentId = req.user.id;
+    const { title, projectId, checklistItemId } = req.body;
 
-    // Find Form3 by ID
-    const form = await Form3.findById(form3Id);
-    if (!form) return res.status(404).json({ message: "Form3 not found" });
+    if (!req.file || !title || !projectId || !checklistItemId) {
+      return res.status(400).json({
+        success: false,
+        message: "File, title, projectId, and checklistItemId are required",
+      });
+    }
 
-    // Find the correct week
-    const weekIndex = form.weeks.findIndex(w => w.weekNumber === parseInt(weekNumber));
-    if (weekIndex === -1) return res.status(404).json({ message: "Week not found" });
+    let project = await ProjectIdea.findById(projectId);
+    let projectType = "ProjectIdea";
 
-    // Update fields
-    form.weeks[weekIndex].functionality = functionality ?? form.weeks[weekIndex].functionality;
-    form.weeks[weekIndex].progress = progress ?? form.weeks[weekIndex].progress;
-    form.weeks[weekIndex].taskDetails = taskDetails ?? form.weeks[weekIndex].taskDetails;
+    if (!project) {
+      project = await AssignedProject.findById(projectId);
+      projectType = "AssignedProject";
+    }
 
-    // Optional: Add a flag to indicate submission for mentor review
-    form.weeks[weekIndex].submitted = true;
+    if (!project) {
+      return res.status(404).json({
+        success: false,
+        message: "Project not found",
+      });
+    }
 
-    await form.save();
+    const checklistItem = await Checklist.findById(checklistItemId);
+    if (!checklistItem) {
+      return res.status(404).json({
+        success: false,
+        message: "Checklist item not found",
+      });
+    }
 
-    res.json({ message: `Week ${weekNumber} updated and submitted for mentor review`, week: form.weeks[weekIndex] });
+    const existing = await StudentChecklist.findOne({
+      student: studentId,
+      projectId: projectId.toString(),
+      checklistItem: checklistItemId.toString(),
+    });
+
+    if (existing) {
+      if (existing.filePath && fs.existsSync(existing.filePath)) {
+        fs.unlinkSync(existing.filePath);
+      }
+
+      existing.fileName = req.file.originalname;
+      existing.filePath = req.file.path;
+      existing.projectType = projectType;
+      existing.uploadedAt = new Date();
+
+      await existing.save();
+
+      return res.status(200).json({
+        success: true,
+        message: "Checklist file updated successfully",
+        submission: {
+          fileName: existing.fileName,
+          filePath: existing.filePath,
+          checklistItemId,
+          uploadedAt: existing.uploadedAt,
+        },
+      });
+    }
+
+    const newUpload = new StudentChecklist({
+      student: studentId,
+      projectId: projectId.toString(),
+      projectType,
+      checklistItem: checklistItemId.toString(),
+      fileName: req.file.originalname,
+      filePath: req.file.path,
+      uploadedAt: new Date(),
+    });
+
+    await newUpload.save();
+
+    return res.status(200).json({
+      success: true,
+      message: "Checklist file uploaded successfully",
+      submission: {
+        fileName: newUpload.fileName,
+        filePath: newUpload.filePath,
+        checklistItemId,
+        uploadedAt: newUpload.uploadedAt,
+      },
+    });
   } catch (err) {
-    console.error("Error updating week:", err);
-    res.status(500).json({ message: "Server error", error: err.message });
+    console.error("Upload checklist file error:", err);
+    res.status(500).json({
+      success: false,
+      message: "Server error while uploading file",
+    });
   }
 };
+
+const saveForm1 = async (req, res) => {
+  try {
+    // ---------------------------
+    // 0️⃣ Get student ID from token
+    // ---------------------------
+    const studentId = req.user?.id || req.user?._id;
+    if (!studentId) {
+      return res.status(401).json({ success: false, message: "Unauthorized" });
+    }
+
+    const { formData = {}, submitType } = req.body; // TEAM | MENTOR | HEAD | undefined (draft)
+
+    // ---------------------------
+    // 1️⃣ Find the project
+    // ---------------------------
+    let project =
+      (await AssignedProject.findOne({
+        $or: [{ student: studentId }, { teamMembers: studentId }],
+      }).populate("teamMembers", "name email")) ||
+      (await ProjectIdea.findOne({
+        $or: [{ "teamLead.id": studentId }, { teamMembers: studentId }],
+      })
+        .populate("teamMembers", "name email")
+        .populate("teamLead.id", "name email"));
+
+    if (!project) {
+      return res.status(404).json({ success: false, message: "Project not found" });
+    }
+
+    const projectModel = project.teamLead ? "ProjectIdea" : "AssignedProject";
+
+    // ---------------------------
+    // 2️⃣ Only Team Lead can submit
+    // ---------------------------
+    let projectLeadId;
+
+    if (project.teamLead) {
+      // ProjectIdea
+      projectLeadId = project.teamLead.id?._id || project.teamLead.id;
+    } else if (project.student) {
+      // AssignedProject
+      projectLeadId = project.student;
+    }
+
+    const isTeamLead = projectLeadId?.toString() === studentId.toString();
+
+    if (!isTeamLead) {
+      return res.status(403).json({
+        success: false,
+        message: "Only Team Lead can fill or submit Form-1",
+      });
+    }
+
+    // ---------------------------
+    // 3️⃣ Get existing Form1 (if any)
+    // ---------------------------
+    let form1 = await Form1.findOne({ projectId: project._id });
+
+    // ---------------------------
+    // 4️⃣ Determine submission stage
+    // ---------------------------
+    let nextStage = "DRAFT";
+    if (submitType === "TEAM") nextStage = "TEAM_SUBMITTED";
+    if (submitType === "MENTOR") nextStage = "MENTOR_SUBMITTED";
+    if (submitType === "HEAD") nextStage = "HEAD_SUBMITTED";
+
+    // Validate stage order
+    const stageOrder = ["DRAFT", "TEAM_SUBMITTED", "MENTOR_SUBMITTED", "HEAD_SUBMITTED"];
+    if (form1) {
+      const currentIndex = stageOrder.indexOf(form1.submissionStage);
+      const nextIndex = stageOrder.indexOf(nextStage);
+      if (nextIndex < currentIndex) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid submission stage transition",
+        });
+      }
+    }
+
+    // ---------------------------
+    // 5️⃣ Normalize Team Members
+    // ---------------------------
+    const teamMembersFromFrontend = Array.isArray(formData.teamMembers) ? formData.teamMembers : [];
+    const teamMembers = teamMembersFromFrontend.map((m) => ({
+      name: m.name || "",
+      mobile: m.mobile || "",
+      expertise: m.expertise || "",
+      role: m.role || "",
+    }));
+
+    // ---------------------------
+    // 6️⃣ Build payload
+    // ---------------------------
+    const payload = {
+      projectId: project._id,
+      projectModel,
+      studentId,
+
+      branch: formData.branch || "",
+      section: formData.section || "",
+      group: formData.group || "",
+      title: formData.title || "",
+      projectTrack: formData.projectTrack || [],
+      introduction: formData.introduction || "",
+
+      toolsTechnologies: formData.toolsTechnologies || [],
+      proposedModules: formData.proposedModules || [],
+      teamMembers,
+
+      mentorName: formData.mentorName || "",
+      labCoordinatorName: formData.labCoordinatorName || "",
+
+      submissionStage: nextStage,
+
+      submittedTimeline: {
+        ...(form1?.submittedTimeline || {}),
+        ...(submitType === "TEAM" && { team: new Date() }),
+        ...(submitType === "MENTOR" && { mentor: new Date() }),
+        ...(submitType === "HEAD" && { head: new Date() }),
+      },
+
+      lastEditedBy: studentId,
+      editHistory: [
+        ...(form1?.editHistory || []),
+        { editedBy: studentId, editedAt: new Date() },
+      ],
+    };
+
+    // ---------------------------
+    // 7️⃣ Save or update Form1
+    // ---------------------------
+    if (form1) {
+      Object.assign(form1, payload);
+      await form1.save();
+    } else {
+      form1 = new Form1(payload);
+      await form1.save();
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Form-1 saved successfully",
+      submissionStage: form1.submissionStage,
+      form1,
+    });
+  } catch (err) {
+    console.error("saveForm1 error:", err);
+    return res.status(500).json({
+      success: false,
+      message: "Server error",
+      error: err.message,
+    });
+  }
+};
+
+// GET FORM 1 (TEAM / MENTOR / HEAD VIEW)
+const getForm1ByProject = async (req, res) => {
+  try {
+    const studentId = req.user?.id || req.user?._id;
+    if (!studentId) {
+      return res.status(401).json({ success: false, message: "Unauthorized" });
+    }
+
+    // 🔍 Find project
+    const project =
+      (await AssignedProject.findOne({
+        $or: [{ student: studentId }, { teamMembers: studentId }],
+      })) ||
+      (await ProjectIdea.findOne({
+        $or: [{ "teamLead.id": studentId }, { teamMembers: studentId }],
+      }));
+
+    if (!project) {
+      return res.status(404).json({ success: false, message: "Project not found" });
+    }
+
+    // 🧠 Detect team lead
+    const projectLeadId =
+      project.teamLead?._id || project.teamLead?.id || project.student;
+
+    const isTeamLead = projectLeadId?.toString() === studentId.toString();
+
+    // 📄 Fetch form
+    const form1 = await Form1.findOne({ projectId: project._id });
+
+    return res.status(200).json({
+      success: true,
+      isTeamLead,
+      form1: form1 || null,
+    });
+  } catch (err) {
+    console.error("getMyForm1 error:", err);
+    return res.status(500).json({
+      success: false,
+      message: "Server error",
+    });
+  }
+};
+
+const saveForm2 = async (req, res) => {
+  try {
+    const studentId = req.user._id || req.user.id;
+
+    // 1. Check ProjectIdea
+    let project = await ProjectIdea.findOne({
+      $or: [{ teamMembers: studentId }, { "teamLead.id": studentId }],
+    });
+
+    let projectType = "ProjectIdea";
+
+    // 2. If not found → check AssignedProject
+    if (!project) {
+      project = await AssignedProject.findOne({
+        teamMembers: { $in: [studentId] },
+      });
+
+      projectType = "AssignedProject";
+    }
+
+    // 3. If still not found → return error
+    if (!project) {
+      return res.status(404).json({
+        success: false,
+        message: "No project found for this student.",
+      });
+    }
+
+    // 4. Map frontend data
+    const {
+      member,
+      moduleName,
+      functionalityName,
+      softDeadline,
+      hardDeadline,
+      details,
+      story,
+    } = req.body;
+
+    if (!member || !details) {
+      return res.status(400).json({
+        success: false,
+        message: "`member` and `details` are required",
+      });
+    }
+
+    // 5. Check if Form2 already exists
+    let form2 = await Form2.findOne({
+      projectId: project._id,
+      studentId: studentId,
+    });
+
+    if (!form2) {
+      // Create new Form2
+      form2 = new Form2({
+        projectId: project._id,
+        projectType,
+        studentId,
+        member,
+        moduleName,
+        functionalityName,
+        details,
+        softDeadline,
+        hardDeadline,
+        story,
+      });
+    } else {
+      // Update existing Form2
+      form2.projectType = projectType;
+      form2.member = member;
+      form2.moduleName = moduleName;
+      form2.functionalityName = functionalityName;
+      form2.details = details;
+      form2.softDeadline = softDeadline;
+      form2.hardDeadline = hardDeadline;
+      form2.story = story;
+    }
+
+    await form2.save();
+
+    return res.status(200).json({
+      success: true,
+      message: "Form2 saved successfully",
+      form2,
+    });
+  } catch (error) {
+    console.error("Error saving Form2:", error);
+    return res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+// ✅ Get Form2 by Project
+const getForm2ByProject = async (req, res) => {
+  try {
+    const studentId = req.user._id || req.user.id;
+
+    // Find the ProjectIdea for this student
+    const project = await ProjectIdea.findOne({
+      $or: [{ teamMembers: studentId }, { "teamLead.id": studentId }],
+    });
+
+    if (!project) {
+      return res
+        .status(404)
+        .json({ success: false, message: "No project found for this student" });
+    }
+
+    // Find Form2 for this project and student
+    const form2 = await Form2.findOne({
+      projectId: project._id,
+      studentId: studentId,
+    });
+
+    if (!form2) {
+      return res.status(200).json({ success: true, form: null }); // No form yet
+    }
+
+    return res.status(200).json({ success: true, form: form2 });
+  } catch (error) {
+    console.error("Error fetching Form2:", error);
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+const getForm3 = async (req, res) => {
+  const academicYear = req.user.academicYear;
+
+  const config = await Form3.findOne({ academicYear });
+  res.json(config);
+};
+
+const submitForm3Week = async (req, res) => {
+  try {
+    const { projectId, weekNumber, functionality, progress, taskDetails } = req.body;
+
+    const submission = await StudentForm3.findOneAndUpdate(
+      {
+        studentId: req.user.id,
+        projectId,
+        weekNumber,
+      },
+      {
+        functionality,
+        progress,
+        taskDetails,
+      },
+      { upsert: true, new: true }
+    );
+
+    res.json({
+      message: "Week saved successfully",
+      submission,
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Failed to save weekly progress" });
+  }
+};
+
 
 module.exports = {
   submitProjectIdeaForm,
   submitProjectBankForm,
   getMyIdeaProject,
-  //selectIdeaMentor,
   getMyAssignedProject,
   getProjectBankList,
   getMentorList,
   getDocuments,
   downloadDocument,
-  getMyForm3,
-  updateForm3Week,
+  getChecklist,
+  uploadChecklistFile,
+  saveForm1,
+  getForm1ByProject,
+  saveForm2,
+  getForm2ByProject,
+  getForm3,
+  submitForm3Week,
 };

@@ -16,13 +16,13 @@ const ProjectBankForm = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+
   const [formData, setFormData] = useState({
     projectId: "",
     title: "",
     description: "",
     technology: "",
-    selectedMentor: "", // ✅ track selected mentor
-
+    selectedMentor: "",
     teamMembers: [],
     academicYear: "",
     branch: "",
@@ -30,7 +30,7 @@ const ProjectBankForm = () => {
     group: "",
   });
 
-  // Fetch projects, mentors, and team members
+  // Load data
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -39,55 +39,44 @@ const ProjectBankForm = () => {
           getAvailableMentors(),
           getAvailableStudents(),
         ]);
-
         setProjects(projList || []);
         setMentors(mentorList || []);
         setTeamMembers(members || []);
-      } catch (err) {
-        console.error(err);
+      } catch {
         setError("Failed to load form data.");
       } finally {
         setLoading(false);
       }
     };
-
     fetchData();
   }, []);
 
-  // Autofill project details when a project is selected
+  // Autofill project data
   useEffect(() => {
     if (!formData.projectId) return;
-    const selectedProject = projects.find((p) => p._id === formData.projectId);
-    if (selectedProject) {
-      setFormData((prev) => ({
-        ...prev,
-        title: selectedProject.title || "",
-        description: selectedProject.description || "",
-        technology: selectedProject.technology || "",
-        academicYear:
-          selectedProject.academicYear ||
-          localStorage.getItem("academicYear") ||
-          "",
-        branch: selectedProject.branch || localStorage.getItem("branch") || "",
-        section:
-          selectedProject.section || localStorage.getItem("section") || "",
-        group: selectedProject.group || localStorage.getItem("group") || "",
-      }));
-    }
+    const p = projects.find((x) => x._id === formData.projectId);
+    if (!p) return;
+
+    setFormData((prev) => ({
+      ...prev,
+      title: p.title || "",
+      description: p.description || "",
+      technology: p.technology || "",
+      academicYear: p.academicYear || localStorage.getItem("academicYear") || "",
+      branch: p.branch || localStorage.getItem("branch") || "",
+      section: p.section || localStorage.getItem("section") || "",
+      group: p.group || localStorage.getItem("group") || "",
+    }));
   }, [formData.projectId, projects]);
 
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
-  };
+  const handleChange = (e) =>
+    setFormData((p) => ({ ...p, [e.target.name]: e.target.value }));
 
   const handleTeamMemberChange = (e) => {
-    const options = e.target.options;
-    const selected = [];
-    for (let i = 0; i < options.length; i++) {
-      if (options[i].selected) selected.push(options[i].value);
-    }
-    setFormData((prev) => ({ ...prev, teamMembers: selected }));
+    const selected = Array.from(e.target.options)
+      .filter((o) => o.selected)
+      .map((o) => o.value);
+    setFormData((p) => ({ ...p, teamMembers: selected }));
   };
 
   const handleSubmit = async (e) => {
@@ -98,30 +87,24 @@ const ProjectBankForm = () => {
     try {
       if (!formData.projectId) throw new Error("Please select a project.");
 
-      const payload = {
+      await submitProjectBankForm({
         student: localStorage.getItem("studentId"),
         projectId: formData.projectId,
         title: formData.title,
         description: formData.description,
         technology: formData.technology,
-        selectedMentor: formData.selectedMentor, // ✅ send selected mentor
-
-        teamMembers: formData.teamMembers || [],
+        selectedMentor: formData.selectedMentor,
+        teamMembers: formData.teamMembers,
         teamLead: {
           id: localStorage.getItem("studentId"),
           name: localStorage.getItem("studentName"),
           email: localStorage.getItem("studentEmail"),
         },
-        academicYear:
-          formData.academicYear || localStorage.getItem("academicYear") || "",
-        branch: formData.branch || localStorage.getItem("branch") || "",
-        section: formData.section || localStorage.getItem("section") || "",
-        group: formData.group || localStorage.getItem("group") || "",
-      };
-
-      console.log("Submitting payload:", payload); // debug
-
-      await submitProjectBankForm(payload);
+        academicYear: formData.academicYear,
+        branch: formData.branch,
+        section: formData.section,
+        group: formData.group,
+      });
 
       setSuccess("Project submitted successfully!");
       setFormData({
@@ -130,7 +113,6 @@ const ProjectBankForm = () => {
         description: "",
         technology: "",
         selectedMentor: "",
-
         teamMembers: [],
         academicYear: "",
         branch: "",
@@ -138,161 +120,121 @@ const ProjectBankForm = () => {
         group: "",
       });
     } catch (err) {
-      console.error("Error submitting project bank form:", err);
       setError(err.message || "Submission failed");
     }
   };
 
-  if (loading) return <p>Loading form...</p>;
+  if ( loading )
+    return <p className="text-center mt-6">Loading form...</p>;
 
   return (
-    <form
-      onSubmit={handleSubmit}
-      className="bg-white p-6 rounded shadow-md max-w-3xl mx-auto"
-    >
-      {error && <p className="text-red-500">{error}</p>}
-      {success && <p className="text-green-500">{success}</p>}
+    <div className="flex justify-center">
+      <div className="w-full max-w-4xl bg-white rounded-2xl shadow-lg p-8">
+        <h2 className="text-2xl font-bold mb-6">Select Project from Bank</h2>
 
-      {/* Project selection */}
-      <label className="block mt-4">Select Project:</label>
-      <select
-        name="projectId"
-        value={formData.projectId}
-        onChange={handleChange}
-        className="w-full p-2 border rounded"
-      >
-        <option value="">-- Select a Project --</option>
-        {projects.length > 0 ? (
-          projects.map((p) => (
-            <option key={p._id} value={p._id}>
-              {p.title}
-            </option>
-          ))
-        ) : (
-          <option disabled>No projects available</option>
-        )}
-      </select>
+        {error && <p className="text-red-500 mb-3">{error}</p>}
+        {success && <p className="text-green-500 mb-3">{success}</p>}
 
-      {/* Autofilled fields */}
-      {formData.projectId && (
-        <>
-          <label className="block mt-4">Title:</label>
-          <input
-            type="text"
-            name="title"
-            value={formData.title}
-            readOnly
-            className="w-full p-2 border rounded bg-gray-100"
-          />
+        <form onSubmit={handleSubmit} className="space-y-6">
 
-          <label className="block mt-4">Description:</label>
-          <textarea
-            name="description"
-            value={formData.description}
-            readOnly
-            className="w-full p-2 border rounded bg-gray-100"
-          />
+          {/* Project Selection */}
+          <div>
+            <label className="form-label">Select Project</label>
+            <select
+              name="projectId"
+              value={formData.projectId}
+              onChange={handleChange}
+              className="form-input"
+            >
+              <option value="">-- Select a Project --</option>
+              {projects.map((p) => (
+                <option key={p._id} value={p._id}>
+                  {p.title}
+                </option>
+              ))}
+            </select>
+          </div>
 
-          <label className="block mt-4">Technology:</label>
-          <input
-            type="text"
-            name="technology"
-            value={formData.technology}
-            readOnly
-            className="w-full p-2 border rounded bg-gray-100"
-          />
+          {formData.projectId && (
+            <>
+              <div>
+                <label className="form-label">Title</label>
+                <input className="form-input bg-gray-100" readOnly value={formData.title} />
+              </div>
 
-          <label className="block mt-4">Academic Year:</label>
-          <input
-            type="text"
-            name="academicYear"
-            value={formData.academicYear}
-            readOnly
-            className="w-full p-2 border rounded bg-gray-100"
-          />
+              <div>
+                <label className="form-label">Description</label>
+                <textarea className="form-input h-28 bg-gray-100" readOnly value={formData.description} />
+              </div>
 
-          <label className="block mt-4">Branch:</label>
-          <input
-            type="text"
-            name="branch"
-            value={formData.branch}
-            readOnly
-            className="w-full p-2 border rounded bg-gray-100"
-          />
+              <div>
+                <label className="form-label">Technology</label>
+                <input className="form-input bg-gray-100" readOnly value={formData.technology} />
+              </div>
 
-          <label className="block mt-4">Section:</label>
-          <input
-            type="text"
-            name="section"
-            value={formData.section}
-            readOnly
-            className="w-full p-2 border rounded bg-gray-100"
-          />
+              {/* Academic Grid */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="form-label">Academic Year</label>
+                  <input className="form-input bg-gray-100" readOnly value={formData.academicYear} />
+                </div>
+                <div>
+                  <label className="form-label">Branch</label>
+                  <input className="form-input bg-gray-100" readOnly value={formData.branch} />
+                </div>
+                <div>
+                  <label className="form-label">Section</label>
+                  <input className="form-input bg-gray-100" readOnly value={formData.section} />
+                </div>
+                <div>
+                  <label className="form-label">Group</label>
+                  <input className="form-input bg-gray-100" readOnly value={formData.group} />
+                </div>
+              </div>
 
-          <label className="block mt-4">Group:</label>
-          <input
-            type="text"
-            name="group"
-            value={formData.group}
-            readOnly
-            className="w-full p-2 border rounded bg-gray-100"
-          />
-        </>
-      )}
+              {/* Mentor */}
+              <div>
+                <label className="form-label">Select Mentor</label>
+                <select
+                  name="selectedMentor"
+                  value={formData.selectedMentor}
+                  onChange={handleChange}
+                  className="form-input"
+                >
+                  <option value="">-- Select Mentor --</option>
+                  {mentors.map((m) => (
+                    <option key={m._id} value={m._id}>{m.name}</option>
+                  ))}
+                </select>
+              </div>
 
-      {/* Mentor selection */}
-      {/* <label className="block mt-4">Select Mentor:</label>
-      <select name="mentorId" value={formData.mentorId} onChange={handleChange} className="w-full p-2 border rounded">
-        <option value="">-- Select a Mentor --</option>
-        {mentors.length > 0
-          ? mentors.map((m) => <option key={m._id} value={m._id}>{m.name}</option>)
-          : <option disabled>No mentors available</option>}
-      </select> */}
-      <label className="block mt-4">Select Mentor:</label>
-      <select
-        name="selectedMentor"
-        value={formData.selectedMentor}
-        onChange={handleChange}
-        className="w-full p-2 border rounded"
-      >
-        <option value="">-- Select a Mentor --</option>
-        {mentors.length > 0 ? (
-          mentors.map((m) => (
-            <option key={m._id} value={m._id}>
-              {m.name}
-            </option>
-          ))
-        ) : (
-          <option disabled>No mentors available</option>
-        )}
-      </select>
+              {/* Team Members */}
+              <div>
+                <label className="form-label">Team Members</label>
+                <select
+                  multiple
+                  value={formData.teamMembers}
+                  onChange={handleTeamMemberChange}
+                  className="form-input h-40"
+                >
+                  {teamMembers.map((s) => (
+                    <option key={s._id} value={s._id}>
+                      {s.name} ({s.rollno})
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </>
+          )}
 
-      {/* Team members selection */}
-      <label className="block mt-4">Select Team Members:</label>
-      <select
-        multiple
-        value={formData.teamMembers}
-        onChange={handleTeamMemberChange}
-        className="w-full p-2 border rounded h-32"
-      >
-        {teamMembers.length > 0 ? (
-          teamMembers.map((s) => (
-            <option key={s._id} value={s._id}>
-              {s.name} ({s.rollno})
-            </option>
-          ))
-        ) : (
-          <option disabled>No team members available</option>
-        )}
-      </select>
-
-      <button
-        type="submit"
-        className="mt-6 bg-blue-500 text-white px-4 py-2 rounded"
-      >
-        Submit Project
-      </button>
-    </form>
+          <div className="flex justify-end pt-4">
+            <button className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2 rounded-xl">
+              Submit Project
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
   );
 };
 

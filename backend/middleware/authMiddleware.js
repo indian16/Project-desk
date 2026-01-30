@@ -5,7 +5,6 @@ const Head = require("../models/Head");
 
 const JWT_SECRET = process.env.JWT_SECRET || "secret123";
 
-// ✅ Verify token
 const verifyToken = async (req, res, next) => {
   try {
     const token = req.headers.authorization?.split(" ")[1];
@@ -26,12 +25,12 @@ const verifyToken = async (req, res, next) => {
 
     if (!user) return res.status(401).json({ message: "User not found" });
 
-    // Include all required fields for controllers
     req.user = {
-      id: user._id,              // use 'id' instead of '_id'
+      _id: user._id,      // ✅ ADD THIS
+      id: user._id,       // keep for compatibility
       role,
       name: user.name,
-      email: user.email,          // add email
+      email: user.email,
       branch: user.branch,
       section: user.section,
       group: user.group,
@@ -45,7 +44,6 @@ const verifyToken = async (req, res, next) => {
   }
 };
 
-// ✅ Role-based access check
 const checkRole = (allowedRoles) => {
   return (req, res, next) => {
     if (!req.user || !allowedRoles.includes(req.user.role)) {

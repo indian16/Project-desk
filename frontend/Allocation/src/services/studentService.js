@@ -68,12 +68,6 @@ export const submitProjectIdeaForm = async (formData) => {
   }
 };
 
-// export const selectIdeaMentor = async (ideaId, mentorId) => {
-//   // assuming you use axios instance `api` with base '/api' or similar
-//   const res = await api.put(`/student/idea-project/${ideaId}/mentor`, { mentorId });
-//   return res.data;
-// };
-
 // Get my idea project
 export const getMyIdeaProject = async () => {
   try {
@@ -138,15 +132,7 @@ export const downloadDocument = async (id, fileName) => {
   link.remove();
 };
 
-export const getMyForm3 = async () => {
-  const res = await api.get("/student/form3");
-  return res.data;
-};
 
-export const updateForm3Week = async (form3Id, weekNumber, weekData) => {
-  const response = await api.put(`/student/form3/${form3Id}/week/${weekNumber}`, weekData);
-  return response.data;
-};
 
 export const assignMentorToProject = async ({ projectId, mentorId }) => {
   try {
@@ -158,4 +144,97 @@ export const assignMentorToProject = async ({ projectId, mentorId }) => {
   }
 };
 
+export const getChecklist = async () => {
+  try {
+    const res = await api.get("/student/project/checklist");
+    return res.data.checklist || [];
+  } catch (error) {
+    console.error("Error fetching checklist:", error);
+    throw new Error(
+      error.response?.data?.message || "Failed to fetch checklist"
+    );
+  }
+};
 
+// ⬆ Upload a student checklist file (with title)
+export const uploadChecklistFile = async (formData) => {
+  try {
+    const data = new FormData();
+    data.append("file", formData.file);
+    data.append("title", formData.title);
+
+    const res = await api.post("/student/project/upload-checklist", data, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
+
+    return res.data;
+  } catch (error) {
+    console.error("Error uploading checklist document:", error);
+    throw new Error(
+      error.response?.data?.message ||
+        "Failed to upload checklist document"
+    );
+  }
+};
+
+export const saveForm1 = async (formData) => {
+  try {
+    const res = await api.post("/student/form1/save", formData);
+    return res.data;
+  } catch (error) {
+    console.error("Error saving Form 1:", error);
+    throw new Error(
+      error.response?.data?.message || "Failed to save Form 1"
+    );
+  }
+};
+
+export const getMyForm1 = async () => {
+  try {
+    const res = await api.get("/student/form1");
+    return res.data;
+  } catch (error) {
+    console.error("Error fetching Form 1:", error);
+    throw new Error(
+      error.response?.data?.message || "Error fetching Form 1"
+    );
+  }
+};
+
+// ✅ Save or update Form 2
+export const  saveForm2 = async (formData) => {
+  try {
+    const res = await api.post("/student/form2/save", formData);
+    return res.data;
+  } catch (error) {
+    console.error("Error saving Form 2:", error);
+    throw new Error(error.response?.data?.message || "Failed to save Form 2");
+  }
+};
+
+// ✅ Get all Form 2 entries for the logged-in student's project
+export const  getForm2ByProject = async () => {
+  try {
+    const res = await api.get("/student/form2/project");
+    return res.data;
+  } catch (error) {
+    console.error("Error fetching Form 2 data:", error);
+    throw new Error(error.response?.data?.message || "Failed to fetch Form 2 data");
+  }
+};
+
+export const getForm3 = async () => {
+  const res = await api.get("/student/form3");
+  return res.data;
+};
+
+export const submitForm3Week = async (projectId, weekNumber, functionality, progress, taskDetails) => {
+  const res = await api.post("/student/form3/submit", { 
+    projectId,
+    weekNumber,
+    functionality,
+    progress,
+    taskDetails
+  });
+  return res.data;
+};

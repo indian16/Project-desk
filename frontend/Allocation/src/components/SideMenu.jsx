@@ -1,7 +1,21 @@
-// src/components/SideMenu.jsx
+// frontend/Allocation/src/components/SideMenu.jsx
 import React from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
+import {
+  LayoutDashboard,
+  FileText,
+  Users,
+  MessageSquare,
+  Upload,
+  BookOpen,
+  FileSpreadsheet,
+  LogOut,
+  ClipboardList,
+  Settings,
+  
+  ChevronRight,
+} from "lucide-react";
 
 const SideMenu = ({ activeMenu, setSection }) => {
   const { user, logout } = useAuth();
@@ -12,237 +26,206 @@ const SideMenu = ({ activeMenu, setSection }) => {
     navigate("/login", { replace: true });
   };
 
+  const MenuItem = ({ icon: Icon, label, sectionName }) => {
+    const isActive = activeMenu === sectionName;
+    return (
+      <button
+        onClick={() => setSection(sectionName)}
+        className={`group flex items-center justify-between w-full px-4 py-2.5 rounded-xl transition-all duration-300 group ${
+          isActive
+            ? "bg-indigo-600 text-white shadow-lg shadow-indigo-100"
+            : "text-slate-500 hover:bg-slate-50 hover:text-slate-900"
+        }`}
+      >
+        <div className="flex items-center">
+          <Icon
+            className={`w-5 h-5 mr-3 transition-colors ${
+              isActive
+                ? "text-white"
+                : "text-slate-400 group-hover:text-indigo-600"
+            }`}
+          />
+          <span
+            className={`text-[13px] font-bold tracking-tight ${
+              isActive ? "font-black" : ""
+            }`}
+          >
+            {label}
+          </span>
+        </div>
+        {isActive && <ChevronRight size={14} className="opacity-50" />}
+      </button>
+    );
+  };
+
   return (
-    <div className="w-64 bg-white border-r border-gray-200 h-screen p-4">
-      {/* User Info */}
-      <div className="mb-6">
-        <h2 className="text-lg font-bold">{user?.name || "User"}</h2>
-        <p className="text-sm text-gray-500 capitalize">{user?.role}</p>
+    <aside className="w-64 bg-white border-r border-slate-200/60 h-full flex flex-col z-40">
+      {/* 1. Brand Header - More Professional */}
+      {/* 1. Brand Identity - Simplified for Navbar Sync */}
+
+      <div className="flex-1 overflow-y-auto px-4 py-4 custom-scrollbar">
+        {/* 2. User Card - Redesigned as a 'Profile' Section */}
+
+        {/* 3. Navigation Groups */}
+        <nav className="space-y-6 top-3">
+          <div>
+            <p className="px-4 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-4">
+              Main Menu
+            </p>
+            <div className="space-y-1">
+              {user?.role === "head" && (
+                <>
+                  <MenuItem
+                    icon={LayoutDashboard}
+                    label="Dashboard"
+                    sectionName="dashboard"
+                  />
+                  <MenuItem
+                    icon={ClipboardList}
+                    label="Review Projects"
+                    sectionName="reviewProjects"
+                  />
+                  <MenuItem
+                    icon={Upload}
+                    label="Uploads"
+                    sectionName="uploads"
+                  />
+                  <MenuItem
+                    icon={MessageSquare}
+                    label="Messages"
+                    sectionName="messages"
+                  />
+                  <MenuItem
+                    icon={FileText}
+                    label="Documents"
+                    sectionName="documents"
+                  />
+                  <MenuItem
+                    icon={Settings}
+                    label="Projects"
+                    sectionName="projects"
+                  />
+                  <hr className="my-2 border-gray-200" />
+                  <MenuItem
+                    icon={FileSpreadsheet}
+                    label="Form 3"
+                    sectionName="form3"
+                  />
+                  <MenuItem
+                    icon={Settings}
+                    label="Settings"
+                    sectionName="HeadSettings"
+                  />
+                </>
+              )}
+
+              {user?.role === "student" && (
+                <>
+                  <MenuItem
+                    icon={LayoutDashboard}
+                    label="My Project"
+                    sectionName="dashboard"
+                  />
+                  <MenuItem
+                    icon={BookOpen}
+                    label="Project Idea"
+                    sectionName="projectIdea"
+                  />
+                  <MenuItem
+                    icon={ClipboardList}
+                    label="Project Bank"
+                    sectionName="projectBank"
+                  />
+                  <MenuItem
+                    icon={Users}
+                    label="Mentor List"
+                    sectionName="mentorList"
+                  />
+                  <MenuItem
+                    icon={FileText}
+                    label="Documentation"
+                    sectionName="documentation"
+                  />
+                   <MenuItem
+                    icon={FileSpreadsheet}
+                    label="Messages"
+                    sectionName="messages"
+                  />
+                  <hr className="my-2 border-gray-200" />
+                  
+                  <MenuItem
+                    icon={FileSpreadsheet}
+                    label="Form 1 (Team lead)"
+                    sectionName="form1"
+                  />
+                  <MenuItem
+                    icon={FileSpreadsheet}
+                    label="Form 2 (Student)"
+                    sectionName="form2"
+                  />
+                  <MenuItem
+                    icon={FileSpreadsheet}
+                    label="Form 3"
+                    sectionName="form3"
+                  />
+                 
+                </>
+              )}
+
+              {user?.role === "mentor" && (
+                <>
+                  <MenuItem
+                    icon={LayoutDashboard}
+                    label="Dashboard"
+                    sectionName="dashboard"
+                  />
+                  <MenuItem
+                    icon={BookOpen}
+                    label="Project Ideas"
+                    sectionName="mentorIdeaProjects"
+                  />
+                  <MenuItem
+                    icon={ClipboardList}
+                    label="Project Bank"
+                    sectionName="mentorBankProjects"
+                  />
+                  <MenuItem
+                    icon={MessageSquare}
+                    label="Messages"
+                    sectionName="messages"
+                  />
+                  <MenuItem
+                    icon={FileText}
+                    label="Documents"
+                    sectionName="documents"
+                  />
+                  <hr className="my-2 border-gray-200" />
+                  <MenuItem
+                    icon={FileSpreadsheet}
+                    label="Form 3"
+                    sectionName="form3m"
+                  />
+                </>
+              )}
+            </div>
+          </div>
+        </nav>
       </div>
 
-      {/* Menu Items */}
-      <div className="flex flex-col gap-2">
-        {/* Head-specific */}
-        {user?.role === "head" && (
-          <>
-            <button
-              onClick={() => setSection("dashboard")}
-              className={`px-4 py-2 rounded ${
-                activeMenu === "dashboard"
-                  ? "bg-blue-600 text-white"
-                  : "hover:bg-gray-100"
-              }`}
-            >
-              Dashboard
-            </button>
-
-            <button
-              onClick={() => setSection("reviewProjects")}
-              className={`px-4 py-2 rounded ${
-                activeMenu === "reviewProjects"
-                  ? "bg-blue-600 text-white"
-                  : "hover:bg-gray-100"
-              }`}
-            >
-              Review Projects
-            </button>
-
-            <button
-              onClick={() => setSection("uploads")}
-              className={`px-4 py-2 rounded ${
-                activeMenu === "uploads"
-                  ? "bg-blue-600 text-white"
-                  : "hover:bg-gray-100"
-              }`}
-            >
-              Uploads
-            </button>
-
-            <button
-              onClick={() => setSection("messages")}
-              className={`px-4 py-2 rounded ${
-                activeMenu === "messages"
-                  ? "bg-blue-600 text-white"
-                  : "hover:bg-gray-100"
-              }`}
-            >
-              Messages
-            </button>
-
-            <button
-              onClick={() => setSection("documents")}
-              className={`px-4 py-2 rounded ${
-                activeMenu === "documents"
-                  ? "bg-blue-600 text-white"
-                  : "hover:bg-gray-100"
-              }`}
-            >
-              Documents
-            </button>
-
-            <button
-              onClick={() => setSection("form3")}
-              className={`px-4 py-2 rounded ${
-                activeMenu === "form3Management"
-                  ? "bg-blue-600 text-white"
-                  : "hover:bg-gray-100"
-              }`}
-              >
-                Form3
-              </button>
-          </>
-        )}
-
-        {/* Student-specific */}
-        {user?.role === "student" && (
-          <>
-            <button
-              onClick={() => setSection("dashboard")}
-              className={`px-4 py-2 rounded ${
-                activeMenu === "dashboard"
-                  ? "bg-blue-600 text-white"
-                  : "hover:bg-gray-100"
-              }`}
-            >
-              My Project
-            </button>
-
-            <button
-              onClick={() => setSection("projectIdea")}
-              className={`px-4 py-2 rounded ${
-                activeMenu === "projectIdea"
-                  ? "bg-blue-600 text-white"
-                  : "hover:bg-gray-100"
-              }`}
-            >
-              Project Idea
-            </button>
-            <button
-              onClick={() => setSection("projectBank")}
-              className={`px-4 py-2 rounded ${
-                activeMenu === "projectBank"
-                  ? "bg-blue-600 text-white"
-                  : "hover:bg-gray-100"
-              }`}
-            >
-              Project Bank
-            </button>
-            <button
-              onClick={() => setSection("mentorList")}
-              className={`px-4 py-2 rounded ${
-                activeMenu === "mentorList"
-                  ? "bg-blue-600 text-white"
-                  : "hover:bg-gray-100"
-              }`}
-            >
-              Mentor List
-            </button>
-             <button
-              onClick={() => setSection("documentation")}
-              className={`px-4 py-2 rounded ${
-                activeMenu === "documentation"
-                  ? "bg-blue-600 text-white"
-                  : "hover:bg-gray-100"
-              }`}
-            >
-              Documentation
-            </button>
-
-             {/* ✅ Form3 access button */}
- <button
-      onClick={() => setSection("form3")}
-      className={`px-4 py-2 rounded ${
-        activeMenu === "form3"
-          ? "bg-blue-600 text-white"
-          : "hover:bg-gray-100"
-      }`}
-    >
-      Form3
-    </button>
-          </>
-        )}
-
-        {/* Mentor-specific */}
-        {user?.role === "mentor" && (
-          <>
-            <button
-              onClick={() => setSection("dashboard")}
-              className={`px-4 py-2 rounded ${
-                activeMenu === "dashboard"
-                  ? "bg-blue-600 text-white"
-                  : "hover:bg-gray-100"
-              }`}
-            >
-              Dashboard
-            </button>
-
-            <button
-              onClick={() => setSection("mentorIdeaProjects")}
-              className={`px-4 py-2 rounded ${
-                activeMenu === "mentorIdeaProjects"
-                  ? "bg-blue-600 text-white"
-                  : "hover:bg-gray-100"
-              }`}
-            >
-              Project Ideas
-            </button>
-            <button
-              onClick={() => setSection("mentorBankProjects")}
-              className={`px-4 py-2 rounded ${
-                activeMenu === "mentorBankProjects"
-                  ? "bg-blue-600 text-white"
-                  : "hover:bg-gray-100"
-              }`}
-            >
-              Project Bank
-            </button>
-            <button
-              onClick={() => setSection("messages")}
-              className={`px-4 py-2 rounded ${
-                activeMenu === "messages"
-                  ? "bg-blue-600 text-white"
-                  : "hover:bg-gray-100"
-              }`}
-            >
-              Messages
-            </button>
-            <button
-              onClick={() => setSection("documents")}
-              className={`px-4 py-2 rounded ${
-                activeMenu === "documents"  
-                  ? "bg-blue-600 text-white"
-                  : "hover:bg-gray-100"
-              }`}
-            >
-              Documents
-            </button>
-
-                {/* ✅ Form3 access button */}
-                <button
-                  onClick={() => setSection("form3m")}
-                  className={`px-4 py-2 rounded ${
-                    activeMenu === "form3m"
-                      ? "bg-blue-600 text-white"
-                      : "hover:bg-gray-100"
-                  }`}
-                >
-                  Form3
-                </button>
-
-
-
-          </>
-        )}
-
-        {/* Logout */}
+      {/* 4. Logout - Minimal & Bottom-Aligned */}
+      <div className="p-6 border-t border-slate-50 bg-slate-50/50">
         <button
           onClick={handleLogout}
-          className="px-4 py-2 mt-4 rounded bg-red-500 text-white hover:bg-red-600"
+          className="flex items-center justify-between w-full px-4 py-3 rounded-xl bg-white border border-slate-200 text-slate-600 font-bold hover:bg-red-50 hover:text-red-600 hover:border-red-100 transition-all duration-300 group shadow-sm"
         >
-          Logout
+          <div className="flex items-center">
+            <LogOut className="w-4 h-4 mr-3 group-hover:rotate-12 transition-transform" />
+            <span className="text-xs">Sign Out</span>
+          </div>
+          <div className="w-1.5 h-1.5 rounded-full bg-slate-300 group-hover:bg-red-400" />
         </button>
       </div>
-    </div>
+    </aside>
   );
 };
 

@@ -1,53 +1,38 @@
-// const multer = require("multer");
-// const path = require("path");
-
-// // store files temporarily
-// const storage = multer.diskStorage({
-//   destination: (req, file, cb) => cb(null, "uploads/"),
-//   filename: (req, file, cb) => {
-//     cb(null, Date.now() + path.extname(file.originalname));
-//   },
-// });
-
-// const upload = multer({ storage });
-
-// module.exports = upload;
-
-
-// middlewares/upload.js
 const multer = require("multer");
 const path = require("path");
+const fs = require("fs");
 
-// storage config
+// Create required folders
+const documentDir = path.join(__dirname, "../uploads/documents");
+const checklistDir = path.join(__dirname, "../uploads/checklist");
+const otherDir = path.join(__dirname, "../uploads/other");
+
+fs.mkdirSync(documentDir, { recursive: true });
+fs.mkdirSync(checklistDir, { recursive: true });
+fs.mkdirSync(otherDir, { recursive: true });
+
+// Storage logic based on route
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    // check type by mimetype or extension
-    if (file.mimetype === "application/pdf") {
-      cb(null, "uploads/documents/"); // pdf files
-    } else {
-      cb(null, "uploads/"); // excel files
+    const url = req.originalUrl;
+
+    if (url.includes("upload-head-doc")) {
+      return cb(null, documentDir); // Head uploads documents
     }
+
+    if (url.includes("upload-checklist")) {
+      return cb(null, checklistDir); // Students upload checklist
+    }
+
+    cb(null, otherDir);
   },
+
   filename: (req, file, cb) => {
     cb(null, Date.now() + path.extname(file.originalname));
   },
 });
 
-// filter for pdf and excel only
-const fileFilter = (req, file, cb) => {
-  const allowedTypes = [
-    "application/pdf",
-    "application/vnd.ms-excel", // .xls
-    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", // .xlsx
-  ];
-
-  if (allowedTypes.includes(file.mimetype)) {
-    cb(null, true);
-  } else {
-    cb(new Error("Only PDF and Excel files are allowed"), false);
-  }
-};
-
-const upload = multer({ storage, fileFilter });
+const upload = multer({ storage });
 
 module.exports = upload;
+

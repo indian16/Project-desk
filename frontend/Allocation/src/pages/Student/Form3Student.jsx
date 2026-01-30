@@ -1,15 +1,19 @@
 import React, { useEffect, useState } from "react";
-import { getMyForm3, updateForm3Week} from "../../services/studentService";
+import {
+  getForm3,
+  submitForm3Week,
+} from "../../services/studentService";
 
 const Form3Student = () => {
   const [form3, setForm3] = useState(null);
   const [loading, setLoading] = useState(true);
   const [savingWeek, setSavingWeek] = useState(null);
 
+  // 🔹 Fetch merged Form3 (global dates + student progress)
   useEffect(() => {
     const fetchForm3 = async () => {
       try {
-        const data = await getMyForm3();
+        const data = await getForm3();
         setForm3(data);
       } catch (err) {
         console.error("Error fetching Form3:", err);
@@ -20,18 +24,34 @@ const Form3Student = () => {
     fetchForm3();
   }, []);
 
+  // 🔹 Local state update only (not DB)
   const handleChange = (weekIndex, field, value) => {
-    const updatedForm = { ...form3 };
-    updatedForm.weeks[weekIndex][field] = value;
-    setForm3(updatedForm);
+    setForm3((prev) => {
+      const updated = { ...prev };
+      updated.weeks = [...updated.weeks];
+      updated.weeks[weekIndex] = {
+        ...updated.weeks[weekIndex],
+        [field]: value,
+      };
+      return updated;
+    });
   };
 
+  // 🔹 Save ONE week → StudentForm3
   const handleSaveWeek = async (weekIndex) => {
     setSavingWeek(weekIndex);
     try {
-      const weekData = form3.weeks[weekIndex];
-      await updateForm3Week(form3._id, weekData.weekNumber, weekData);
-      alert(`Week ${weekData.weekNumber} saved successfully!`);
+      const week = form3.weeks[weekIndex];
+
+      await submitForm3Week(
+        form3.projectId,
+        week.weekNumber,
+        week.functionality,
+        week.progress,
+        week.taskDetails
+      );
+
+      alert(`Week ${week.weekNumber} saved successfully!`);
     } catch (err) {
       console.error("Error saving week:", err);
       alert("Failed to save. Try again!");
@@ -39,38 +59,20 @@ const Form3Student = () => {
       setSavingWeek(null);
     }
   };
-//   const handleDownloadPDF = async () => {
-//     if (!form3) {
-//       alert("Form3 data missing. Cannot download PDF.");
-//       return;
-//     }
-  
-//     try {
-//       const projectId =
-//         typeof form3.projectId === "object" ? form3.projectId._id : form3.projectId;
-  
-//       await downloadForm3PDF(projectId); // ✅ now always a valid string ObjectId
-//     } catch (err) {
-//       console.error("Error downloading Form-3B PDF:", err);
-//       alert(err.message || "Failed to download PDF");
-//     }
-//   };
-  
-  if (loading) return <p className="text-gray-500">Loading Form3...</p>;
-  if (!form3) return <p className="text-red-500">No Form3 found for you yet.</p>;
 
+  // ---------------- UI STATES ----------------
+  if (loading)
+    return <p className="text-gray-500">Loading Form3...</p>;
+
+  if (!form3)
+    return <p className="text-red-500">Form3 not published yet.</p>;
+
+  // ---------------- UI ----------------
   return (
     <div className="max-w-4xl mx-auto p-6 space-y-6">
       <h2 className="text-2xl font-bold text-gray-800 mb-4">
-        Form3 - {form3.projectId?.title}
+        Form-3 : Weekly Progress Report
       </h2>
-
-      <button
-        onClick={handleDownloadPDF}
-        className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded transition"
-      >
-        Download Form-3B PDF
-      </button>
 
       {form3.weeks.map((week, index) => (
         <div
@@ -83,6 +85,7 @@ const Form3Student = () => {
             {new Date(week.toDate).toLocaleDateString()})
           </h4>
 
+          {/* -------- INPUTS -------- */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
             <div>
               <label className="block text-gray-600 font-medium mb-1">
@@ -90,11 +93,11 @@ const Form3Student = () => {
               </label>
               <input
                 type="text"
-                value={week.functionality}
+                value={week.functionality || ""}
                 onChange={(e) =>
                   handleChange(index, "functionality", e.target.value)
                 }
-                className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                className="w-full border border-gray-300 rounded px-3 py-2 focus:ring-2 focus:ring-blue-400"
               />
             </div>
 
@@ -104,13 +107,13 @@ const Form3Student = () => {
               </label>
               <input
                 type="number"
-                value={week.progress}
                 min={0}
                 max={100}
+                value={week.progress ?? ""}
                 onChange={(e) =>
                   handleChange(index, "progress", e.target.value)
                 }
-                className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                className="w-full border border-gray-300 rounded px-3 py-2 focus:ring-2 focus:ring-blue-400"
               />
             </div>
 
@@ -119,17 +122,17 @@ const Form3Student = () => {
                 Task Details
               </label>
               <textarea
-                value={week.taskDetails}
+                rows={3}
+                value={week.taskDetails || ""}
                 onChange={(e) =>
                   handleChange(index, "taskDetails", e.target.value)
                 }
-                className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400"
-                rows={3}
+                className="w-full border border-gray-300 rounded px-3 py-2 focus:ring-2 focus:ring-blue-400"
               />
             </div>
           </div>
 
-          {/* Mentor Marks */}
+          {/* -------- Mentor Marks -------- */}
           <p className="mb-4">
             <span className="font-medium">Mentor Marks:</span>{" "}
             {week.mentorMarks != null ? (
@@ -141,6 +144,7 @@ const Form3Student = () => {
             )}
           </p>
 
+          {/* -------- SAVE BUTTON -------- */}
           <button
             onClick={() => handleSaveWeek(index)}
             disabled={savingWeek === index}
