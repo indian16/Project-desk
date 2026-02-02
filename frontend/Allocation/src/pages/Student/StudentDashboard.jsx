@@ -29,7 +29,7 @@ const ChecklistModal = ({ isOpen, onClose, projectId, token }) => {
   const fetchChecklist = async () => {
     try {
       const res = await axios.get(
-        "http://localhost:8000/api/student/project/checklist",
+        "/api/student/project/checklist",
         {
           headers: { Authorization: `Bearer ${token}` },
         }
