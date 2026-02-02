@@ -27,7 +27,7 @@ const Form1Student = () => {
   useEffect(() => {
     const fetchForm = async () => {
       try {
-        const res = await axios.get("http://localhost:8000/api/student/form1", {
+        const res = await axios.get("/api/student/form1", {
           headers: { Authorization: `Bearer ${token}` },
         });
 
