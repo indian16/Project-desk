@@ -268,7 +268,7 @@ const StudentDashboard = () => {
         const [project, idea, checklistRes] = await Promise.all([
           getMyAssignedProject(),
           getMyIdeaProject(),
-          axios.get("http://localhost:8000/api/student/project/checklist", {
+          axios.get("/api/student/project/checklist", {
             headers: { Authorization: `Bearer ${token}` },
           }),
         ]);
