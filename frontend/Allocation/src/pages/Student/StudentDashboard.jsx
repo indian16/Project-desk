@@ -55,7 +55,7 @@ const ChecklistModal = ({ isOpen, onClose, projectId, token }) => {
     try {
       setUploading(true);
       await axios.post(
-        "http://localhost:8000/api/student/project/upload-checklist",
+        "api/student/project/upload-checklist",
         formData,
         {
           headers: { Authorization: `Bearer ${token}` },
