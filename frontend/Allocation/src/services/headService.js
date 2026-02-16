@@ -250,28 +250,23 @@ export const getChecklistMetrics = async (filters = {}) => {
   return res.data;
 };
 
-export const createForm3ForAllProjects = async (academicYear, weeks) => {
-  if (!academicYear || !weeks?.length) {
-    throw new Error("Academic year and weeks are required");
-  }
-
-  const res = await api.post("/head/form3/create", {
-    academicYear,
-    weeks
-  });
-
+export const createForm3ForAllProjects = async (formData) => {
+  const res = await api.post("/head/form3", formData);
   return res.data;
 };
 
-export const getForm3 = async (academicYear) => {
+export const getForm3Head = async (academicYear) => {
   const res = await api.get(`/head/form3/${academicYear}`);
   return res.data;
 };
 
 export const deleteForm3 = async (academicYear, weekNumber) => {
-  const res = await api.delete(`/head/form3/${academicYear}/week/${weekNumber}`);
+  const res = await api.delete(
+    `/head/form3/${academicYear}/${weekNumber}`
+  );
   return res.data;
 };
+
 
 export const getTotalProjects = async () => ({ count: 0 });
 export const getTotalForms = async () => ({ count: 0 });

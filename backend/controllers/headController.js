@@ -3,7 +3,7 @@ const ProjectIdea = require("../models/ProjectIdea");
 const Document = require("../models/Document");
 const path = require("path");
 const Interview = require("../models/Interview");
-const XLSX = require('xlsx');
+const XLSX = require("xlsx");
 const fs = require("fs");
 const Mentor = require("../models/Mentor");
 const ProjectBank = require("../models/ProjectBank");
@@ -13,8 +13,7 @@ const Message = require("../models/Message");
 const bcrypt = require("bcryptjs");
 const Checklist = require("../models/Checklist");
 const StudentChecklist = require("../models/StudentChecklist");
-const Form3 = require("../models/Form3")
-
+const Form3 = require("../models/Form3");
 
 // ✅ Get all available academic years
 const getAvailableYears = async (req, res) => {
@@ -28,7 +27,7 @@ const getAvailableYears = async (req, res) => {
   } catch (error) {
     res.status(500).json({ message: "Failed to fetch academic years" });
   }
-}; 
+};
 
 const getProjectsByYear = async (req, res) => {
   try {
@@ -87,7 +86,7 @@ const uploadStudentList = async (req, res) => {
       await Student.findOneAndUpdate(
         { rollno: student.rollno, academicYear: student.academicYear },
         student,
-        { upsert: true, new: true, setDefaultsOnInsert: true }
+        { upsert: true, new: true, setDefaultsOnInsert: true },
       );
     }
 
@@ -132,7 +131,7 @@ const uploadMentorList = async (req, res) => {
       await Mentor.findOneAndUpdate(
         { email: mentor.email }, // unique per year
         mentor,
-        { upsert: true, new: true, setDefaultsOnInsert: true }
+        { upsert: true, new: true, setDefaultsOnInsert: true },
       );
     }
 
@@ -176,7 +175,14 @@ const uploadProjectBankExcel = async (req, res) => {
     let skippedCount = 0;
 
     for (const project of projectsToInsert) {
-      if (!project.projectId || !project.title || !project.description || !project.technology || !project.category || !project.academicYear) {
+      if (
+        !project.projectId ||
+        !project.title ||
+        !project.description ||
+        !project.technology ||
+        !project.category ||
+        !project.academicYear
+      ) {
         skippedCount++;
         continue;
       }
@@ -184,7 +190,7 @@ const uploadProjectBankExcel = async (req, res) => {
       await ProjectBank.findOneAndUpdate(
         { projectId: project.projectId, academicYear: project.academicYear },
         project,
-        { upsert: true, new: true, setDefaultsOnInsert: true }
+        { upsert: true, new: true, setDefaultsOnInsert: true },
       );
 
       insertedCount++;
@@ -200,7 +206,9 @@ const uploadProjectBankExcel = async (req, res) => {
     });
   } catch (error) {
     console.error("Project Bank Upload Error:", error);
-    res.status(500).json({ message: "Server error while uploading project bank" });
+    res
+      .status(500)
+      .json({ message: "Server error while uploading project bank" });
   }
 };
 
@@ -220,23 +228,29 @@ const uploadHeadDocument = async (req, res) => {
     const doc = new Document({
       title: title,
       fileName: req.file.originalname, // original file name
-      filePath: req.file.path,         // path in uploads/
-      uploadedBy: req.user._id,        // Ensure ObjectId consistency
+      filePath: req.file.path, // path in uploads/
+      uploadedBy: req.user._id, // Ensure ObjectId consistency
     });
 
     await doc.save();
 
-    res.status(200).json({ message: "Document uploaded successfully", document: doc });
+    res
+      .status(200)
+      .json({ message: "Document uploaded successfully", document: doc });
   } catch (error) {
     console.error("Upload Document Error:", error);
-    res.status(500).json({ message: "Server error while uploading document", error });
+    res
+      .status(500)
+      .json({ message: "Server error while uploading document", error });
   }
 };
 
 // 📌 Get All Documents uploaded by Head
 const getHeadDocuments = async (req, res) => {
   try {
-    const docs = await Document.find({ uploadedBy: req.user._id }).sort({ createdAt: -1 });
+    const docs = await Document.find({ uploadedBy: req.user._id }).sort({
+      createdAt: -1,
+    });
     res.status(200).json(docs);
   } catch (error) {
     console.error("Get Documents Error:", error);
@@ -254,7 +268,9 @@ const downloadHeadDocument = async (req, res) => {
     res.download(path.resolve(doc.filePath), doc.fileName);
   } catch (error) {
     console.error("Download Document Error:", error);
-    res.status(500).json({ message: "Server error while downloading document" });
+    res
+      .status(500)
+      .json({ message: "Server error while downloading document" });
   }
 };
 
@@ -281,7 +297,9 @@ const deleteHeadDocument = async (req, res) => {
 const getPendingIdeasForHead = async (req, res) => {
   try {
     const { academicYear } = req.query;
-    const filter = academicYear ? { status: "pending", academicYear } : { status: "pending" };
+    const filter = academicYear
+      ? { status: "pending", academicYear }
+      : { status: "pending" };
 
     const pendingIdeas = await ProjectIdea.find(filter)
       .populate("teamMembers", "name email rollno")
@@ -339,7 +357,10 @@ const getReviewedIdeasForHead = async (req, res) => {
     const { academicYear } = req.query;
 
     const filter = academicYear
-      ? { status: { $in: ["approved_by_head", "rejected_by_head"] }, academicYear }
+      ? {
+          status: { $in: ["approved_by_head", "rejected_by_head"] },
+          academicYear,
+        }
       : { status: { $in: ["approved_by_head", "rejected_by_head"] } };
 
     const reviewedIdeas = await ProjectIdea.find(filter)
@@ -358,7 +379,7 @@ const getAcceptedIdeasForInterview = async (req, res) => {
     // Fetch ideas with status 'approved_by_head'
     const ideas = await ProjectIdea.find({ status: "approved_by_head" })
       .populate("teamLead.id", "name email") // populate team lead info
-      .select("title teamLead description");  // select only necessary fields
+      .select("title teamLead description"); // select only necessary fields
 
     if (!ideas || ideas.length === 0) {
       return res.status(404).json({ message: "No accepted ideas found" });
@@ -381,14 +402,23 @@ const scheduleInterview = async (req, res) => {
 
   try {
     const idea = await ProjectIdea.findById(id);
-    if (!idea) return res.status(404).json({ message: "Project idea not found" });
+    if (!idea)
+      return res.status(404).json({ message: "Project idea not found" });
 
     idea.status = "interview_scheduled";
     await idea.save();
 
-    const interview = await Interview.create({ idea: id, date, time, location, notes });
+    const interview = await Interview.create({
+      idea: id,
+      date,
+      time,
+      location,
+      notes,
+    });
 
-    res.status(200).json({ message: "Interview scheduled successfully", interview });
+    res
+      .status(200)
+      .json({ message: "Interview scheduled successfully", interview });
   } catch (error) {
     console.error("Error scheduling interview:", error.message);
     res.status(500).json({ message: "Server error" });
@@ -402,7 +432,8 @@ const reviewInterview = async (req, res) => {
 
   try {
     const idea = await ProjectIdea.findById(id);
-    if (!idea) return res.status(404).json({ message: "Project idea not found" });
+    if (!idea)
+      return res.status(404).json({ message: "Project idea not found" });
 
     if (idea.status !== "interview_scheduled") {
       return res
@@ -412,12 +443,17 @@ const reviewInterview = async (req, res) => {
 
     if (action === "pass") idea.status = "interview_passed";
     else if (action === "fail") idea.status = "interview_failed";
-    else return res.status(400).json({ message: "Invalid action. Use 'pass' or 'fail'." });
+    else
+      return res
+        .status(400)
+        .json({ message: "Invalid action. Use 'pass' or 'fail'." });
 
     // Skip validation so it doesn't fail if mentor is missing
     await idea.save({ validateBeforeSave: false });
 
-    res.status(200).json({ message: `Interview ${action}ed successfully`, idea });
+    res
+      .status(200)
+      .json({ message: `Interview ${action}ed successfully`, idea });
   } catch (err) {
     console.error("Error reviewing interview:", err);
     res.status(500).json({ message: "Server error" });
@@ -429,7 +465,11 @@ const getAllInterviews = async (req, res) => {
   try {
     const { academicYear } = req.query;
 
-    const filter = { status: { $in: ["interview_scheduled", "interview_passed", "interview_failed"] } };
+    const filter = {
+      status: {
+        $in: ["interview_scheduled", "interview_passed", "interview_failed"],
+      },
+    };
     if (academicYear) filter.academicYear = academicYear;
 
     const ideas = await ProjectIdea.find(filter)
@@ -506,13 +546,15 @@ const addChecklistItem = async (req, res) => {
     const { title } = req.body;
 
     if (!title) {
-      return res.status(400).json({ success: false, message: "Title is required" });
+      return res
+        .status(400)
+        .json({ success: false, message: "Title is required" });
     }
 
     const newItem = new Checklist({
       title,
       createdBy: req.user._id, // head ID from auth
-      studentUploads: [] // students will fill this later
+      studentUploads: [], // students will fill this later
     });
 
     await newItem.save();
@@ -520,12 +562,14 @@ const addChecklistItem = async (req, res) => {
     res.status(201).json({
       success: true,
       message: "Checklist item added successfully",
-      item: newItem
+      item: newItem,
     });
-
   } catch (error) {
     console.error("Add Checklist Error:", error);
-    res.status(500).json({ success: false, message: "Server error while adding checklist item" });
+    res.status(500).json({
+      success: false,
+      message: "Server error while adding checklist item",
+    });
   }
 };
 
@@ -537,7 +581,10 @@ const getChecklistItems = async (req, res) => {
     res.status(200).json({ success: true, items });
   } catch (error) {
     console.error("Get Checklist Error:", error);
-    res.status(500).json({ success: false, message: "Server error while fetching checklist items" });
+    res.status(500).json({
+      success: false,
+      message: "Server error while fetching checklist items",
+    });
   }
 };
 
@@ -548,53 +595,89 @@ const deleteChecklistItem = async (req, res) => {
 
     const item = await Checklist.findById(id);
     if (!item) {
-      return res.status(404).json({ success: false, message: "Checklist item not found" });
+      return res
+        .status(404)
+        .json({ success: false, message: "Checklist item not found" });
     }
 
     await item.deleteOne();
 
-    res.status(200).json({ success: true, message: "Checklist item deleted successfully" });
-
+    res
+      .status(200)
+      .json({ success: true, message: "Checklist item deleted successfully" });
   } catch (error) {
     console.error("Delete Checklist Error:", error);
-    res.status(500).json({ success: false, message: "Server error while deleting checklist item" });
+    res.status(500).json({
+      success: false,
+      message: "Server error while deleting checklist item",
+    });
   }
 };
 
 const createForm3ForAllProjects = async (req, res) => {
   try {
-    const { academicYear, weeks } = req.body;
+    let { academicYear, weeks } = req.body;
+    academicYear = academicYear.replace(/[–—]/g, "-").trim();
 
-    if (!academicYear || !weeks?.length) {
-      return res.status(400).json({ message: "Academic year & weeks required" });
+    console.log("Incoming Data:", req.body);
+
+    if (!academicYear) {
+      return res.status(400).json({ message: "Academic year required" });
     }
 
-    const existing = await Form3.findOne({ academicYear });
-    if (existing) {
-      existing.weeks = weeks;
-      await existing.save();
-      return res.json({ message: "Form3 updated globally", form3: existing });
+    if (!weeks || !Array.isArray(weeks) || weeks.length === 0) {
+      return res.status(400).json({ message: "Weeks data required" });
     }
 
-    const form3 = await Form3.create({ academicYear, weeks });
+    // Validate each week
+    for (let week of weeks) {
+      if (!week.fromDate || !week.toDate) {
+        return res.status(400).json({
+          message: `Dates missing for week ${week.weekNumber}`,
+        });
+      }
+    }
 
-    res.json({
-      message: "Form3 created globally",
+    let form3 = await Form3.findOne({ academicYear });
+
+    if (form3) {
+      form3.weeks = weeks;
+      await form3.save();
+
+      return res.status(200).json({
+        message: "Form3 updated successfully",
+        form3,
+      });
+    }
+
+    form3 = await Form3.create({
+      academicYear,
+      weeks,
+    });
+
+    res.status(201).json({
+      message: "Form3 created successfully",
       form3,
     });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: "Failed to create Form3" });
+  } catch (error) {
+    console.error("CREATE FORM3 ERROR:", error);
+    res.status(500).json({
+      message: error.message || "Server error",
+    });
   }
 };
 
-const getForm3 = async (req, res) => {
+const getForm3Head = async (req, res) => {
   try {
-    const { academicYear } = req.params;
-    if (!academicYear) return res.status(400).json({ message: "Academic year required" });
+    let { academicYear } = req.params;
+    academicYear = academicYear.replace(/[–—]/g, "-").trim();
+
+    if (!academicYear)
+      return res.status(400).json({ message: "Academic year required" });
 
     const form3 = await Form3.findOne({ academicYear });
-    if (!form3) return res.status(404).json({ message: "Form3 not found for this year" });
+    if (!form3)
+      return res.status(404).json({ message: "Form3 not found for this year" });
 
     res.status(200).json(form3);
   } catch (err) {
@@ -607,19 +690,25 @@ const deleteForm3 = async (req, res) => {
   try {
     const { academicYear, weekNumber } = req.params;
     const weekNum = parseInt(weekNumber);
-    if (isNaN(weekNum)) return res.status(400).json({ message: "Invalid week number" });
+    if (isNaN(weekNum))
+      return res.status(400).json({ message: "Invalid week number" });
 
     const form3 = await Form3.findOne({ academicYear });
     if (!form3) return res.status(404).json({ message: "Form3 not found" });
 
     // Remove the week
-    form3.weeks = form3.weeks.filter(w => w.weekNumber !== weekNum);
+    form3.weeks = form3.weeks.filter((w) => w.weekNumber !== weekNum);
 
     // Re-number remaining weeks
-    form3.weeks = form3.weeks.map((w, index) => ({ ...w.toObject(), weekNumber: index + 1 }));
+    form3.weeks = form3.weeks.map((w, index) => ({
+      ...w.toObject(),
+      weekNumber: index + 1,
+    }));
 
     await form3.save();
-    res.status(200).json({ message: `Week ${weekNum} removed successfully`, form3 });
+    res
+      .status(200)
+      .json({ message: `Week ${weekNum} removed successfully`, form3 });
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: "Server error deleting week" });
@@ -633,17 +722,18 @@ const getAllStudentChecklistSubmissions = async (req, res) => {
       .populate("projectId");
 
     res.status(200).json({ success: true, submissions });
-
   } catch (error) {
     console.error("Fetch Submissions Error:", error);
-    res.status(500).json({ success: false, message: "Server error while fetching submissions" });
+    res.status(500).json({
+      success: false,
+      message: "Server error while fetching submissions",
+    });
   }
 };
 
 // GET /api/head/projects-with-checklist
 const getProjectsWithChecklist = async (req, res) => {
   try {
-
     // Fetch both project types
     const bankProjects = await ProjectBank.find()
       .populate("mentor", "name email")
@@ -664,28 +754,27 @@ const getProjectsWithChecklist = async (req, res) => {
         const checklistWithUploads = await Promise.all(
           checklistItems.map(async (item) => {
             const studentUploads = item.studentUploads.filter(
-              (u) => String(u.project) === String(proj._id)
+              (u) => String(u.project) === String(proj._id),
             );
 
             return {
               ...item.toObject(),
-              studentUploads
+              studentUploads,
             };
-          })
+          }),
         );
 
         return {
           ...proj.toObject(),
-          checklist: checklistWithUploads
+          checklist: checklistWithUploads,
         };
-      })
+      }),
     );
 
     res.status(200).json({
       success: true,
-      projects: projectsWithChecklist
+      projects: projectsWithChecklist,
     });
-
   } catch (error) {
     console.error("Error fetching projects with checklist:", error);
     res.status(500).json({ success: false, message: "Server error" });
@@ -709,11 +798,7 @@ const getAllProjectsCount = async (req, res) => {
 const getUpcomingInterview = async (req, res) => {
   try {
     // Fetch only interviews that have valid idea reference
-    const upcoming = await Interview.findOne({
-      
-    })
-      .sort({ date: 1 })
-      .lean();
+    const upcoming = await Interview.findOne({}).sort({ date: 1 }).lean();
 
     if (!upcoming) {
       return res.status(200).json(null);
@@ -721,7 +806,7 @@ const getUpcomingInterview = async (req, res) => {
 
     // Fetch project idea details
     const idea = await ProjectIdea.findById(upcoming.idea)
-      
+
       .lean();
 
     return res.status(200).json({
@@ -745,7 +830,7 @@ const getUpcomingInterview = async (req, res) => {
     console.error("Error in getUpcomingInterview:", err);
     return res.status(500).json({ error: "Server error" });
   }
-}
+};
 
 // Count how many new project ideas are submitted
 const getNewProjectIdeaCount = async (req, res) => {
@@ -778,9 +863,8 @@ const getSummaryCounts = async (req, res) => {
       counts: {
         totalIdeas,
         totalAssigned,
-      }
+      },
     });
-
   } catch (err) {
     return res.status(500).json({ success: false, message: err.message });
   }
@@ -791,7 +875,6 @@ const getSummaryCounts = async (req, res) => {
 // ======================================
 const getAllProjectsCombined = async (req, res) => {
   try {
-
     // ===========================
     // FETCH PROJECT IDEAS
     // ===========================
@@ -799,7 +882,7 @@ const getAllProjectsCombined = async (req, res) => {
       .populate("mentor")
       .populate("teamMembers");
 
-    const formattedIdeas = ideas.map(i => ({
+    const formattedIdeas = ideas.map((i) => ({
       type: "idea",
       id: i._id,
       title: i.title,
@@ -812,9 +895,8 @@ const getAllProjectsCombined = async (req, res) => {
       academicYear: i.academicYear,
       branch: i.branch,
       section: i.section,
-      group: i.group
+      group: i.group,
     }));
-
 
     // ===========================
     // FETCH ASSIGNED PROJECTS
@@ -824,7 +906,7 @@ const getAllProjectsCombined = async (req, res) => {
       .populate("selectedMentor")
       .populate("approvedMentor");
 
-    const formattedAssigned = assigned.map(a => ({
+    const formattedAssigned = assigned.map((a) => ({
       type: "assigned",
       id: a._id,
       title: a.title,
@@ -838,29 +920,23 @@ const getAllProjectsCombined = async (req, res) => {
       academicYear: a.academicYear,
       branch: a.branch,
       section: a.section,
-      group: a.group
+      group: a.group,
     }));
-
 
     // ===========================
     // MERGE BOTH LISTS
     // ===========================
-    const allProjects = [
-      ...formattedIdeas,
-      ...formattedAssigned
-    ];
+    const allProjects = [...formattedIdeas, ...formattedAssigned];
 
     return res.json({
       success: true,
       total: allProjects.length,
-      projects: allProjects
+      projects: allProjects,
     });
-
   } catch (err) {
     return res.status(500).json({ success: false, message: err.message });
   }
 };
-
 
 const getChecklistMetrics = async (req, res) => {
   try {
@@ -903,7 +979,7 @@ const getChecklistMetrics = async (req, res) => {
           title: item.title,
           uploadedCount, // 👈 unchanged
         };
-      })
+      }),
     );
 
     return res.status(200).json({
@@ -962,7 +1038,7 @@ module.exports = {
   getChecklistItems,
   deleteChecklistItem,
   createForm3ForAllProjects,
-  getForm3,
+  getForm3Head,
   deleteForm3,
   getAllStudentChecklistSubmissions,
   getProjectsWithChecklist,

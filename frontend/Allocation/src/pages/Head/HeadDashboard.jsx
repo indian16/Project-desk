@@ -354,7 +354,7 @@ const HeadDashboard = () => {
     },
   ];
 
-  const [completion, setCompletion] = useState({ form1: 0, form2: 0 });
+  //const [completion, setCompletion] = useState({ form1: 0, form2: 0 });
 
   const [theme, setTheme] = useState(
     localStorage.getItem("head-theme") || "calm",
@@ -402,23 +402,23 @@ const HeadDashboard = () => {
     fetchFilters();
   }, []);
 
-  useEffect(() => {
-    const fetchProjectCompletion = async () => {
-      try {
-        const res = await getProjectCompletion();
+  // useEffect(() => {
+  //   const fetchProjectCompletion = async () => {
+  //     try {
+  //       const res = await getProjectCompletion();
 
-        setCompletion({
-          form1: res.form1 || 0,
-          form2: res.form2 || 0,
-        });
-      } catch (err) {
-        console.error("Error fetching project completion:", err);
-        setCompletion({ form1: 0, form2: 0 });
-      }
-    };
+  //       setCompletion({
+  //         form1: res.form1 || 0,
+  //         form2: res.form2 || 0,
+  //       });
+  //     } catch (err) {
+  //       console.error("Error fetching project completion:", err);
+  //       setCompletion({ form1: 0, form2: 0 });
+  //     }
+  //   };
 
-    fetchProjectCompletion();
-  }, []);
+  //   fetchProjectCompletion();
+  // }, []);
 
   useEffect(() => {
     const fetchChecklistMetrics = async () => {

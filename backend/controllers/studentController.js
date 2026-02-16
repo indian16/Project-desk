@@ -10,6 +10,7 @@ const fs = require("fs");
 const Form1 = require("../models/Form1");
 const Form2 = require("../models/Form2");
 const Form3 = require("../models/Form3");
+const Student = require("../models/Student");
 const StudentForm3 = require("../models/StudentForm3");
 
 const submitProjectIdeaForm = async (req, res) => {
@@ -779,39 +780,77 @@ const getForm2ByProject = async (req, res) => {
 };
 
 const getForm3 = async (req, res) => {
-  const academicYear = req.user.academicYear;
+  try {
+    // get student from token
+    const student = await Student.findById(req.user.id);
 
-  const config = await Form3.findOne({ academicYear });
-  res.json(config);
+    if (!student)
+      return res.status(404).json({ message: "Student not found" });
+
+    const form3 = await Form3.findOne({
+      academicYear: student.academicYear,
+    });
+
+    if (!form3)
+      return res.status(404).json({ message: "Form3 not found for this year" });
+
+    res.status(200).json(form3);
+  } catch (err) {
+    console.error("Error fetching Form3:", err);
+    res.status(500).json({ message: "Server error" });
+  }
 };
+
 
 const submitForm3Week = async (req, res) => {
   try {
+    const studentId = req.user.id;
     const { projectId, weekNumber, functionality, progress, taskDetails } = req.body;
 
-    const submission = await StudentForm3.findOneAndUpdate(
-      {
-        studentId: req.user.id,
-        projectId,
-        weekNumber,
-      },
-      {
-        functionality,
-        progress,
-        taskDetails,
-      },
-      { upsert: true, new: true }
+    // 🔎 Validate project
+    const project =
+      (await ProjectIdea.findOne({
+        $or: [{ "teamLead.id": studentId }, { teamMembers: studentId }],
+      })) ||
+      (await AssignedProject.findOne({
+        $or: [{ student: studentId }, { teamMembers: studentId }],
+      }));
+
+    if (!project) {
+      return res.status(404).json({
+        success: false,
+        message: "No project found",
+      });
+    }
+
+    if (project._id.toString() !== projectId) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid project ID",
+      });
+    }
+
+    // 📝 Save in StudentForm3 (NOT Form3)
+    const updated = await StudentForm3.findOneAndUpdate(
+      { studentId, projectId, weekNumber },
+      { functionality, progress, taskDetails },
+      { new: true, upsert: true }
     );
 
-    res.json({
-      message: "Week saved successfully",
-      submission,
+    res.status(200).json({
+      success: true,
+      message: `Week ${weekNumber} submitted successfully`,
+      data: updated,
     });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: "Failed to save weekly progress" });
+  } catch (error) {
+    console.error("Error submitting Form-3 week:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to submit Form-3 week",
+    });
   }
 };
+
 
 
 module.exports = {

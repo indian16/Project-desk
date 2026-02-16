@@ -2,7 +2,7 @@
 const mongoose = require("mongoose");
 
 const Form3 = new mongoose.Schema({
-  academicYear: { type: String, required: true },
+  academicYear: {type: String, required: true},
   weeks: [
     {
       weekNumber: Number,

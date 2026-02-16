@@ -228,13 +228,14 @@ export const getForm3 = async () => {
   return res.data;
 };
 
-export const submitForm3Week = async (projectId, weekNumber, functionality, progress, taskDetails) => {
-  const res = await api.post("/student/form3/submit", { 
-    projectId,
-    weekNumber,
-    functionality,
-    progress,
-    taskDetails
-  });
-  return res.data;
+
+
+export const submitForm3Week = async (formData) => {
+  try {
+    const res = await api.post("/student/form3/week", formData);
+    return res.data;
+  } catch (error) {
+    console.error("Error submitting Form 3 week:", error);
+    throw new Error(error.response?.data?.message || "Failed to submit Form 3 week");
+  }
 };

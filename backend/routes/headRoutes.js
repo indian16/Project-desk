@@ -23,7 +23,7 @@ const {
   sendMessage,
   getMessages,
   createForm3ForAllProjects,
-  getForm3,
+  getForm3Head,
   deleteForm3,
   addChecklistItem,
   getChecklistItems,
@@ -73,9 +73,11 @@ router.post("/message/send", sendMessage);
 router.get("/message/get", getMessages);
 
 //Form 3
-router.post("/form3/create", createForm3ForAllProjects);
-router.get("/form3/:academicYear", getForm3);
-router.delete("/form3/:academicYear/week/:weekNumber", deleteForm3);
+// CREATE
+router.post("/form3", createForm3ForAllProjects);
+router.get("/form3/:academicYear", getForm3Head);
+router.delete("/form3/:academicYear/:weekNumber", deleteForm3);
+
 
 // Checklist management
 router.post("/checklist", addChecklistItem);

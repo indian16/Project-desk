@@ -45,7 +45,6 @@ router.post("/form1/save",  saveForm1);
 router.get("/form2/project",  getForm2ByProject);
 router.post("/form2/save",  saveForm2);
 router.get("/form3", getForm3);
-router.put("/form3/submit", submitForm3Week);
-
+router.post("/form3/week", submitForm3Week);
 
 module.exports = router;

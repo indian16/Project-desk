@@ -1,159 +1,175 @@
 import React, { useEffect, useState } from "react";
-import {
-  getForm3,
-  submitForm3Week,
-} from "../../services/studentService";
+import { getForm3, submitForm3Week } from "../../services/studentService";
 
 const Form3Student = () => {
   const [form3, setForm3] = useState(null);
+  const [weeks, setWeeks] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
   const [savingWeek, setSavingWeek] = useState(null);
 
-  // 🔹 Fetch merged Form3 (global dates + student progress)
   useEffect(() => {
     const fetchForm3 = async () => {
       try {
-        const data = await getForm3();
-        setForm3(data);
+        const res = await getForm3();
+
+        // Handle different possible backend response structures
+        const form3Data = res?.form3 || res?.data?.form3 || res?.data || res;
+
+        if (!form3Data || !form3Data.weeks) {
+          setError("Form-3 not configured yet");
+          return;
+        }
+
+        setForm3(form3Data);
+        setWeeks(form3Data.weeks || []);
+
+        // Save projectId if available
+        if (form3Data.projectId) {
+          localStorage.setItem("projectId", form3Data.projectId);
+        }
       } catch (err) {
-        console.error("Error fetching Form3:", err);
+        console.error("FORM3 ERROR:", err);
+        setError("Failed to load Form-3");
       } finally {
         setLoading(false);
       }
     };
+
     fetchForm3();
   }, []);
 
-  // 🔹 Local state update only (not DB)
-  const handleChange = (weekIndex, field, value) => {
-    setForm3((prev) => {
-      const updated = { ...prev };
-      updated.weeks = [...updated.weeks];
-      updated.weeks[weekIndex] = {
-        ...updated.weeks[weekIndex],
-        [field]: value,
-      };
-      return updated;
-    });
+  const handleChange = (index, field, value) => {
+    const updatedWeeks = [...weeks];
+    updatedWeeks[index][field] = value;
+    setWeeks(updatedWeeks);
   };
 
-  // 🔹 Save ONE week → StudentForm3
-  const handleSaveWeek = async (weekIndex) => {
-    setSavingWeek(weekIndex);
+  const handleSubmitWeek = async (week) => {
     try {
-      const week = form3.weeks[weekIndex];
+      const projectId = localStorage.getItem("projectId"); // ✅ Always get latest
+
+      if (!projectId) {
+        alert("Project not assigned yet");
+        return;
+      }
+
+      setSavingWeek(week.weekNumber);
 
       await submitForm3Week(
-        form3.projectId,
+        projectId,
         week.weekNumber,
         week.functionality,
         week.progress,
-        week.taskDetails
+        week.taskDetails,
       );
 
-      alert(`Week ${week.weekNumber} saved successfully!`);
+      alert(`Week ${week.weekNumber} saved successfully`);
     } catch (err) {
-      console.error("Error saving week:", err);
-      alert("Failed to save. Try again!");
+      console.error("SUBMIT ERROR:", err);
+      alert("Failed to save week");
     } finally {
       setSavingWeek(null);
     }
   };
 
-  // ---------------- UI STATES ----------------
-  if (loading)
-    return <p className="text-gray-500">Loading Form3...</p>;
+  if (loading) return <p className="text-center mt-10">Loading Form-3...</p>;
 
-  if (!form3)
-    return <p className="text-red-500">Form3 not published yet.</p>;
+  if (error) return <p className="text-center text-red-600 mt-10">{error}</p>;
 
-  // ---------------- UI ----------------
+  if (!form3) return <p className="text-center mt-10">Form-3 not available</p>;
+
   return (
-    <div className="max-w-4xl mx-auto p-6 space-y-6">
-      <h2 className="text-2xl font-bold text-gray-800 mb-4">
-        Form-3 : Weekly Progress Report
-      </h2>
+    <div className="max-w-6xl mx-auto bg-gradient-to-br from-indigo-50 to-white p-10 rounded-3xl shadow-2xl mt-10 border-t-4 border-indigo-600">
+      {/* Header */}
+      <div className="mb-10">
+        <h2 className="text-3xl font-extrabold text-indigo-700 mb-2">
+          Weekly Progress Report
+        </h2>
+        <p className="text-gray-500">
+          Submit your weekly implementation details and track your progress.
+        </p>
+      </div>
 
-      {form3.weeks.map((week, index) => (
-        <div
-          key={week.weekNumber}
-          className="bg-white shadow-md rounded-lg p-6 border border-gray-200 hover:shadow-lg transition"
-        >
-          <h4 className="text-lg font-semibold text-gray-700 mb-4">
-            Week {week.weekNumber} (
-            {new Date(week.fromDate).toLocaleDateString()} -{" "}
-            {new Date(week.toDate).toLocaleDateString()})
-          </h4>
-
-          {/* -------- INPUTS -------- */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
-            <div>
-              <label className="block text-gray-600 font-medium mb-1">
-                Functionality
-              </label>
-              <input
-                type="text"
-                value={week.functionality || ""}
-                onChange={(e) =>
-                  handleChange(index, "functionality", e.target.value)
-                }
-                className="w-full border border-gray-300 rounded px-3 py-2 focus:ring-2 focus:ring-blue-400"
-              />
-            </div>
-
-            <div>
-              <label className="block text-gray-600 font-medium mb-1">
-                Progress (%)
-              </label>
-              <input
-                type="number"
-                min={0}
-                max={100}
-                value={week.progress ?? ""}
-                onChange={(e) =>
-                  handleChange(index, "progress", e.target.value)
-                }
-                className="w-full border border-gray-300 rounded px-3 py-2 focus:ring-2 focus:ring-blue-400"
-              />
-            </div>
-
-            <div className="sm:col-span-2">
-              <label className="block text-gray-600 font-medium mb-1">
-                Task Details
-              </label>
-              <textarea
-                rows={3}
-                value={week.taskDetails || ""}
-                onChange={(e) =>
-                  handleChange(index, "taskDetails", e.target.value)
-                }
-                className="w-full border border-gray-300 rounded px-3 py-2 focus:ring-2 focus:ring-blue-400"
-              />
-            </div>
-          </div>
-
-          {/* -------- Mentor Marks -------- */}
-          <p className="mb-4">
-            <span className="font-medium">Mentor Marks:</span>{" "}
-            {week.mentorMarks != null ? (
-              <span className="text-green-600 font-semibold">
-                {week.mentorMarks}
-              </span>
-            ) : (
-              <span className="text-yellow-600 font-semibold">Pending</span>
-            )}
-          </p>
-
-          {/* -------- SAVE BUTTON -------- */}
-          <button
-            onClick={() => handleSaveWeek(index)}
-            disabled={savingWeek === index}
-            className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded transition disabled:opacity-50"
-          >
-            {savingWeek === index ? "Saving..." : "Save Week"}
-          </button>
+      {weeks.length === 0 ? (
+        <div className="text-center py-10 text-gray-500">
+          No weeks configured by Head yet.
         </div>
-      ))}
+      ) : (
+        <div className="space-y-8">
+          {weeks.map((week, index) => (
+            <div
+              key={week.weekNumber}
+              className="bg-white rounded-2xl shadow-lg p-6 border border-gray-100 hover:shadow-xl transition duration-300"
+            >
+              {/* Week Header */}
+              <div className="flex justify-between items-center mb-6">
+                <div>
+                  <h3 className="text-xl font-bold text-indigo-700">
+                    Week {week.weekNumber}
+                  </h3>
+
+                  {week.fromDate && week.toDate && (
+                    <p className="text-sm text-gray-500 mt-1">
+                      {new Date(week.fromDate).toLocaleDateString("en-GB")} —{" "}
+                      {new Date(week.toDate).toLocaleDateString("en-GB")}
+                    </p>
+                  )}
+                </div>
+
+                <span className="bg-indigo-100 text-indigo-700 text-xs font-semibold px-3 py-1 rounded-full">
+                  Academic Progress
+                </span>
+              </div>
+
+              {/* Inputs */}
+              <div className="space-y-4">
+                <textarea
+                  placeholder="Describe the functionality implemented this week..."
+                  className="w-full border border-gray-200 p-3 rounded-xl focus:ring-4 focus:ring-indigo-200 focus:border-indigo-500 outline-none transition"
+                  value={week.functionality || ""}
+                  onChange={(e) =>
+                    handleChange(index, "functionality", e.target.value)
+                  }
+                />
+
+                <textarea
+                  placeholder="Explain the progress achieved..."
+                  className="w-full border border-gray-200 p-3 rounded-xl focus:ring-4 focus:ring-indigo-200 focus:border-indigo-500 outline-none transition"
+                  value={week.progress || ""}
+                  onChange={(e) =>
+                    handleChange(index, "progress", e.target.value)
+                  }
+                />
+
+                <textarea
+                  placeholder="Provide detailed task information..."
+                  className="w-full border border-gray-200 p-3 rounded-xl focus:ring-4 focus:ring-indigo-200 focus:border-indigo-500 outline-none transition"
+                  value={week.taskDetails || ""}
+                  onChange={(e) =>
+                    handleChange(index, "taskDetails", e.target.value)
+                  }
+                />
+              </div>
+
+              {/* Button */}
+              <div className="mt-6 flex justify-end">
+                <button
+                  onClick={() => handleSubmitWeek(week)}
+                  disabled={savingWeek === week.weekNumber}
+                  className={`px-6 py-2 rounded-full font-semibold text-white transition duration-300 ${
+                    savingWeek === week.weekNumber
+                      ? "bg-gray-400"
+                      : "bg-gradient-to-r from-indigo-600 to-blue-500 hover:scale-105"
+                  }`}
+                >
+                  {savingWeek === week.weekNumber ? "Saving..." : "Save Week"}
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 };

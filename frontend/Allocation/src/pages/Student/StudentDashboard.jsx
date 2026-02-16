@@ -1,4 +1,3 @@
-// src/pages/student/StudentDashboard.jsx
 import React, { useEffect, useState } from "react";
 import SideMenu from "../../components/SideMenu";
 import Navbar from "../../components/Navbar";
@@ -11,13 +10,18 @@ import StudentPipeline from "./StudentPipeline";
 import Form1Student from "./Form1Student";
 import Form2Student from "./Form2Student";
 import Form3Student from "./Form3Student";
+
 import {
   getMyAssignedProject,
   getMyIdeaProject,
+  getChecklist,
+  uploadChecklistFile,
 } from "../../services/studentService";
-import axios from "axios";
 
-const ChecklistModal = ({ isOpen, onClose, projectId, token }) => {
+/* =========================================================
+   CHECKLIST MODAL
+========================================================= */
+const ChecklistModal = ({ isOpen, onClose, projectId }) => {
   const [checklist, setChecklist] = useState([]);
   const [projectTitle, setProjectTitle] = useState("");
   const [uploading, setUploading] = useState(false);
@@ -28,16 +32,11 @@ const ChecklistModal = ({ isOpen, onClose, projectId, token }) => {
 
   const fetchChecklist = async () => {
     try {
-      const res = await axios.get(
-        "/api/student/project/checklist",
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
-      setChecklist(res.data.checklist || []);
-      setProjectTitle(res.data.title);
+      const data = await getChecklist();
+      setChecklist(data.checklist || []);
+      setProjectTitle(data.title || "");
     } catch (err) {
-      console.error(err);
+      console.error("Checklist fetch error:", err);
     }
   };
 
@@ -46,24 +45,19 @@ const ChecklistModal = ({ isOpen, onClose, projectId, token }) => {
     const file = e.target.files[0];
     if (!file) return;
 
-    const formData = new FormData();
-    formData.append("file", file);
-    formData.append("title", item.title);
-    formData.append("projectId", projectId);
-    formData.append("checklistItemId", item.checklistId);
-
     try {
       setUploading(true);
-      await axios.post(
-        "/api/student/project/upload-checklist",
-        formData,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
+
+      await uploadChecklistFile({
+        file,
+        title: item.title,
+        projectId,
+        checklistItemId: item.checklistId,
+      });
+
       fetchChecklist();
     } catch (err) {
-      console.error(err);
+      console.error("Upload error:", err);
     } finally {
       setUploading(false);
     }
@@ -80,7 +74,6 @@ const ChecklistModal = ({ isOpen, onClose, projectId, token }) => {
         className="bg-white rounded-xl w-full max-w-2xl p-6 shadow-lg"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Header */}
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-lg font-semibold text-slate-800">
             Checklist – {projectTitle}
@@ -93,7 +86,6 @@ const ChecklistModal = ({ isOpen, onClose, projectId, token }) => {
           </button>
         </div>
 
-        {/* Body */}
         {checklist.length === 0 ? (
           <p className="text-sm text-slate-500">
             No checklist items available.
@@ -105,7 +97,6 @@ const ChecklistModal = ({ isOpen, onClose, projectId, token }) => {
                 key={item.checklistId}
                 className="border rounded-lg p-4 flex justify-between items-center"
               >
-                {/* Left */}
                 <div>
                   <p className="font-medium text-slate-800">{item.title}</p>
                   <p
@@ -115,7 +106,7 @@ const ChecklistModal = ({ isOpen, onClose, projectId, token }) => {
                         : "text-red-600"
                     }`}
                   >
-                    {item.status.toUpperCase()}
+                    {item.status?.toUpperCase()}
                   </p>
 
                   {item.fileName && (
@@ -125,7 +116,6 @@ const ChecklistModal = ({ isOpen, onClose, projectId, token }) => {
                   )}
                 </div>
 
-                {/* Right */}
                 <div className="text-sm">
                   <label className="cursor-pointer text-blue-600 font-medium hover:underline">
                     {item.status === "submitted"
@@ -149,14 +139,18 @@ const ChecklistModal = ({ isOpen, onClose, projectId, token }) => {
   );
 };
 
-// ✅ Dashboard Cards (THEMED UI)
+/* =========================================================
+   DASHBOARD CARDS
+========================================================= */
 const DashboardCards = ({ assignProject, ideaProject, onChecklistOpen }) => {
   const renderCard = (project, title) => {
     if (!project) {
       return (
         <div className="bg-white rounded-xl shadow-sm border p-6">
           <h2 className="text-lg font-semibold text-slate-800 mb-2">{title}</h2>
-          <p className="text-sm text-slate-500">No project submitted yet.</p>
+          <p className="text-sm text-slate-500">
+            No project submitted yet.
+          </p>
         </div>
       );
     }
@@ -174,15 +168,16 @@ const DashboardCards = ({ assignProject, ideaProject, onChecklistOpen }) => {
     const statusColor = statusText.toLowerCase().includes("pending")
       ? "bg-yellow-100 text-yellow-700"
       : statusText.toLowerCase().includes("approved") ||
-          statusText.toLowerCase().includes("passed")
-        ? "bg-green-100 text-green-700"
-        : "bg-red-100 text-red-700";
+        statusText.toLowerCase().includes("passed")
+      ? "bg-green-100 text-green-700"
+      : "bg-red-100 text-red-700";
 
     return (
       <div className="bg-white rounded-xl shadow-sm border hover:shadow-md transition p-6 flex flex-col">
-        {/* Header */}
         <div className="flex items-center justify-between mb-3">
-          <h2 className="text-lg font-semibold text-slate-800">{title}</h2>
+          <h2 className="text-lg font-semibold text-slate-800">
+            {title}
+          </h2>
           <span
             className={`text-xs px-3 py-1 rounded-full font-medium ${statusColor}`}
           >
@@ -190,7 +185,6 @@ const DashboardCards = ({ assignProject, ideaProject, onChecklistOpen }) => {
           </span>
         </div>
 
-        {/* Title & Description */}
         <h3 className="text-base font-semibold text-slate-900 mb-1">
           {project.title}
         </h3>
@@ -198,7 +192,6 @@ const DashboardCards = ({ assignProject, ideaProject, onChecklistOpen }) => {
           {project.description}
         </p>
 
-        {/* Details */}
         <div className="space-y-2 text-sm text-slate-700">
           <p>
             <span className="font-medium">Mentor:</span> {mentorName}
@@ -225,7 +218,6 @@ const DashboardCards = ({ assignProject, ideaProject, onChecklistOpen }) => {
           )}
         </div>
 
-        {/* Footer */}
         <div className="mt-6">
           <button
             onClick={() => onChecklistOpen(project._id)}
@@ -246,17 +238,17 @@ const DashboardCards = ({ assignProject, ideaProject, onChecklistOpen }) => {
   );
 };
 
-// ✅ Main StudentDashboard
+/* =========================================================
+   MAIN STUDENT DASHBOARD
+========================================================= */
 const StudentDashboard = () => {
   const [section, setSection] = useState("dashboard");
   const [assignedProject, setAssignedProject] = useState(null);
   const [ideaProject, setIdeaProject] = useState(null);
+  const [checklist, setChecklist] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [checklistOpenId, setChecklistOpenId] = useState(null);
-  const [checklist, setChecklist] = useState([]);
-
-  const token = localStorage.getItem("token");
 
   useEffect(() => {
     if (section !== "dashboard") return;
@@ -264,18 +256,17 @@ const StudentDashboard = () => {
     const fetchDashboardData = async () => {
       setLoading(true);
       setError("");
+
       try {
-        const [project, idea, checklistRes] = await Promise.all([
+        const [project, idea, checklistData] = await Promise.all([
           getMyAssignedProject(),
           getMyIdeaProject(),
-          axios.get("/api/student/project/checklist", {
-            headers: { Authorization: `Bearer ${token}` },
-          }),
+          getChecklist(),
         ]);
 
         setAssignedProject(project);
         setIdeaProject(idea);
-        setChecklist(checklistRes.data.checklist || []);
+        setChecklist(checklistData.checklist || []);
       } catch (err) {
         console.error(err);
         setError("Failed to load project data.");
@@ -290,17 +281,17 @@ const StudentDashboard = () => {
   return (
     <div className="flex flex-col h-screen w-full bg-gray-100">
       <Navbar />
+
       <div className="flex flex-1 overflow-hidden">
         <SideMenu activeMenu={section} setSection={setSection} />
+
         <main className="flex-1 overflow-y-auto">
           <div className="max-w-7xl mx-auto px-6 py-6">
             {loading ? (
-              <div className="flex justify-center items-center py-20">
-                <p className="text-slate-500 font-medium">Loading...</p>
-              </div>
+              <div className="text-center py-20">Loading...</div>
             ) : error ? (
-              <div className="flex justify-center items-center py-20">
-                <p className="text-red-500 font-semibold">{error}</p>
+              <div className="text-center py-20 text-red-500">
+                {error}
               </div>
             ) : section === "dashboard" ? (
               <>
@@ -308,18 +299,18 @@ const StudentDashboard = () => {
                   project={ideaProject || assignedProject}
                   checklist={checklist}
                 />
+
                 <DashboardCards
                   assignProject={assignedProject}
                   ideaProject={ideaProject}
-                  onChecklistOpen={(projectId) => setChecklistOpenId(projectId)}
+                  onChecklistOpen={(id) => setChecklistOpenId(id)}
                 />
 
                 {checklistOpenId && (
                   <ChecklistModal
-                    isOpen={!!checklistOpenId}
+                    isOpen={true}
                     onClose={() => setChecklistOpenId(null)}
                     projectId={checklistOpenId}
-                    token={token}
                   />
                 )}
               </>
