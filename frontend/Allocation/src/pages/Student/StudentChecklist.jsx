@@ -20,9 +20,15 @@ const StudentChecklist = ({ isOpen, onClose, projectId }) => {
         params: { projectId },
       });
 
-      setChecklist(
-        Array.isArray(res.data?.checklist) ? res.data.checklist : [],
-      );
+      console.log("Checklist API response:", res.data);
+
+      // 🔥 Production-safe handling
+      const data =
+        res.data?.checklist ??
+        res.data ??
+        [];
+
+      setChecklist(Array.isArray(data) ? data : []);
     } catch (err) {
       console.error("Error fetching checklist:", err);
       setChecklist([]);
@@ -40,15 +46,18 @@ const StudentChecklist = ({ isOpen, onClose, projectId }) => {
     const formData = new FormData();
     formData.append("file", file);
     formData.append("projectId", projectId);
-    formData.append("checklistItemId", id); // ✅ must match backend
-    formData.append("title", item.title); // ✅ required by backend
+    formData.append("checklistItemId", id); // must match backend
+    formData.append("title", item.title);   // required by backend
 
     try {
       setUploadingId(id);
 
-      await api.post("/student/project/upload-checklist", formData);
+      await api.post(
+        "/student/project/upload-checklist",
+        formData
+      );
 
-      fetchChecklist();
+      fetchChecklist(); // refresh after upload
     } catch (err) {
       console.error("Upload failed:", err.response?.data);
     } finally {
@@ -65,9 +74,10 @@ const StudentChecklist = ({ isOpen, onClose, projectId }) => {
 
         {loading ? (
           <p>Loading...</p>
-        ) : checklist.length === 0 ? (
+        ) : !Array.isArray(checklist) || checklist.length === 0 ? (
           <p>No checklist available.</p>
         ) : (
+          Array.isArray(checklist) &&
           checklist.map((item) => {
             const id = item.checklistId || item._id;
 
@@ -77,7 +87,9 @@ const StudentChecklist = ({ isOpen, onClose, projectId }) => {
                 className="border rounded-lg p-4 flex justify-between items-center mb-3"
               >
                 <div>
-                  <p className="font-medium text-slate-800">{item.title}</p>
+                  <p className="font-medium text-slate-800">
+                    {item.title}
+                  </p>
 
                   <p
                     className={`text-xs mt-1 font-medium ${
@@ -100,8 +112,8 @@ const StudentChecklist = ({ isOpen, onClose, projectId }) => {
                   {uploadingId === id
                     ? "Uploading..."
                     : item.status === "submitted"
-                      ? "Replace File"
-                      : "Upload File"}
+                    ? "Replace File"
+                    : "Upload File"}
 
                   <input
                     type="file"
