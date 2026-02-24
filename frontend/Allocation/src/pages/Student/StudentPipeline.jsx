@@ -1,7 +1,7 @@
 // frontend/Allocation/src/pages/Student/StudentPipeline.jsx
 import React from "react";
 
-const StudentPipeline = ({ project, checklist }) => {
+const StudentPipeline = ({ project, checklist = [] }) => {
   if (!project) return null;
 
   const steps = [
@@ -11,24 +11,24 @@ const StudentPipeline = ({ project, checklist }) => {
     },
     {
       label: "Interview Passed",
-      completed: project.status?.includes("interview"),
+      completed: project.status?.toLowerCase().includes("interview"),
     },
     {
       label: "Mentor Assigned",
       completed:
-        project.selectedMentor ||
-        project.approvedMentor ||
-        project.mentor,
+        !!project.selectedMentor ||
+        !!project.approvedMentor ||
+        !!project.mentor,
     },
     {
       label: "Checklist Completed",
       completed:
         checklist.length > 0 &&
-        checklist.every((item) => item.status === "submitted"),
+        checklist.every((item) => item?.status === "submitted"),
     },
     {
       label: "Final Approval",
-      completed: project.status?.includes("approved"),
+      completed: project.status?.toLowerCase().includes("approved"),
     },
   ];
 
