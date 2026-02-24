@@ -1,8 +1,11 @@
 // frontend/Allocation/src/pages/Student/StudentPipeline.jsx
 import React from "react";
 
-const StudentPipeline = ({ project, checklist = [] }) => {
+const StudentPipeline = ({ project, checklist }) => {
   if (!project) return null;
+
+  // 🔥 SAFETY FIX
+  const safeChecklist = Array.isArray(checklist) ? checklist : [];
 
   const steps = [
     {
@@ -23,8 +26,8 @@ const StudentPipeline = ({ project, checklist = [] }) => {
     {
       label: "Checklist Completed",
       completed:
-        checklist.length > 0 &&
-        checklist.every((item) => item?.status === "submitted"),
+        safeChecklist.length > 0 &&
+        safeChecklist.every((item) => item?.status === "submitted"),
     },
     {
       label: "Final Approval",
@@ -38,7 +41,6 @@ const StudentPipeline = ({ project, checklist = [] }) => {
 
   return (
     <div className="bg-white border rounded-xl p-6 shadow-sm mb-6">
-      {/* Header */}
       <div className="flex justify-between items-center mb-4">
         <h3 className="text-lg font-semibold text-slate-800">
           Project Progress
@@ -48,7 +50,6 @@ const StudentPipeline = ({ project, checklist = [] }) => {
         </span>
       </div>
 
-      {/* Progress Bar */}
       <div className="w-full bg-slate-200 rounded-full h-2 mb-5">
         <div
           className="bg-blue-600 h-2 rounded-full transition-all duration-300"
@@ -56,7 +57,6 @@ const StudentPipeline = ({ project, checklist = [] }) => {
         />
       </div>
 
-      {/* Steps */}
       <ul className="space-y-3">
         {steps.map((step, index) => (
           <li key={index} className="flex items-center gap-3">
@@ -78,7 +78,6 @@ const StudentPipeline = ({ project, checklist = [] }) => {
         ))}
       </ul>
 
-      {/* Next Task */}
       {nextStep && (
         <div className="mt-5 bg-blue-50 border border-blue-200 rounded-lg p-3">
           <p className="text-sm text-blue-800">
