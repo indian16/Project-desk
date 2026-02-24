@@ -12,6 +12,7 @@ import Form1Student from "./Form1Student";
 import Form2Student from "./Form2Student";
 import Form3Student from "./Form3Student";
 import StudentChecklist from "./StudentChecklist";
+import api from "../../utils/axios";
 
 import {
   getMyAssignedProject,
@@ -25,9 +26,7 @@ const DashboardCards = ({ assignProject, ideaProject, onChecklistOpen }) => {
       return (
         <div className="bg-white rounded-xl shadow-sm border p-6">
           <h2 className="text-lg font-semibold text-slate-800 mb-2">{title}</h2>
-          <p className="text-sm text-slate-500">
-            No project submitted yet.
-          </p>
+          <p className="text-sm text-slate-500">No project submitted yet.</p>
         </div>
       );
     }
@@ -45,9 +44,9 @@ const DashboardCards = ({ assignProject, ideaProject, onChecklistOpen }) => {
     const statusColor = statusText.toLowerCase().includes("pending")
       ? "bg-yellow-100 text-yellow-700"
       : statusText.toLowerCase().includes("approved") ||
-        statusText.toLowerCase().includes("passed")
-      ? "bg-green-100 text-green-700"
-      : "bg-red-100 text-red-700";
+          statusText.toLowerCase().includes("passed")
+        ? "bg-green-100 text-green-700"
+        : "bg-red-100 text-red-700";
 
     return (
       <div className="bg-white rounded-xl shadow-sm border hover:shadow-md transition p-6 flex flex-col">
@@ -104,6 +103,7 @@ const StudentDashboard = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [checklistOpenId, setChecklistOpenId] = useState(null);
+  const [checklist, setChecklist] = useState([]);
 
   useEffect(() => {
     if (section !== "dashboard") return;
@@ -119,6 +119,17 @@ const StudentDashboard = () => {
 
         setAssignedProject(project);
         setIdeaProject(idea);
+        const activeProject = idea || project;
+
+        if (activeProject?._id) {
+          const res = await api.get("/student/project/checklist", {
+            params: { projectId: activeProject._id },
+          });
+
+          const data = res.data?.checklist ?? res.data ?? [];
+
+          setChecklist(Array.isArray(data) ? data : []);
+        }
       } catch (err) {
         console.error(err);
         setError("Failed to load project data.");
@@ -138,25 +149,20 @@ const StudentDashboard = () => {
         <main className="flex-1 overflow-y-auto">
           <div className="max-w-7xl mx-auto px-6 py-6">
             {loading ? (
-              <div className="text-center py-20 text-slate-500">
-                Loading...
-              </div>
+              <div className="text-center py-20 text-slate-500">Loading...</div>
             ) : error ? (
-              <div className="text-center py-20 text-red-500">
-                {error}
-              </div>
+              <div className="text-center py-20 text-red-500">{error}</div>
             ) : section === "dashboard" ? (
               <>
                 <StudentPipeline
                   project={ideaProject || assignedProject}
+                  checklist={checklist}
                 />
 
                 <DashboardCards
                   assignProject={assignedProject}
                   ideaProject={ideaProject}
-                  onChecklistOpen={(projectId) =>
-                    setChecklistOpenId(projectId)
-                  }
+                  onChecklistOpen={(projectId) => setChecklistOpenId(projectId)}
                 />
 
                 {checklistOpenId && (
