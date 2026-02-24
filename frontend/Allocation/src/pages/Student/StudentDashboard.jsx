@@ -1,3 +1,4 @@
+// src/pages/student/StudentDashboard.jsx
 import React, { useEffect, useState } from "react";
 import SideMenu from "../../components/SideMenu";
 import Navbar from "../../components/Navbar";
@@ -10,17 +11,13 @@ import StudentPipeline from "./StudentPipeline";
 import Form1Student from "./Form1Student";
 import Form2Student from "./Form2Student";
 import Form3Student from "./Form3Student";
-
 import {
   getMyAssignedProject,
   getMyIdeaProject,
-  getChecklist,
-  uploadChecklistFile,
 } from "../../services/studentService";
+import api from "../../utils/axios";
 
-/* =========================================================
-   CHECKLIST MODAL
-========================================================= */
+/* ================= CHECKLIST MODAL ================= */
 const ChecklistModal = ({ isOpen, onClose, projectId }) => {
   const [checklist, setChecklist] = useState([]);
   const [projectTitle, setProjectTitle] = useState("");
@@ -32,11 +29,11 @@ const ChecklistModal = ({ isOpen, onClose, projectId }) => {
 
   const fetchChecklist = async () => {
     try {
-      const data = await getChecklist();
-      setChecklist(data.checklist || []);
-      setProjectTitle(data.title || "");
+      const res = await api.get("/student/project/checklist");
+      setChecklist(res.data.checklist || []);
+      setProjectTitle(res.data.title);
     } catch (err) {
-      console.error("Checklist fetch error:", err);
+      console.error(err);
     }
   };
 
@@ -45,19 +42,18 @@ const ChecklistModal = ({ isOpen, onClose, projectId }) => {
     const file = e.target.files[0];
     if (!file) return;
 
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("title", item.title);
+    formData.append("projectId", projectId);
+    formData.append("checklistItemId", item.checklistId || item._id);
+
     try {
       setUploading(true);
-
-      await uploadChecklistFile({
-        file,
-        title: item.title,
-        projectId,
-        checklistItemId: item.checklistId,
-      });
-
+      await api.post("/student/project/upload-checklist", formData);
       fetchChecklist();
     } catch (err) {
-      console.error("Upload error:", err);
+      console.error(err);
     } finally {
       setUploading(false);
     }
@@ -94,7 +90,7 @@ const ChecklistModal = ({ isOpen, onClose, projectId }) => {
           <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-2">
             {checklist.map((item) => (
               <div
-                key={item.checklistId}
+                key={item.checklistId || item._id}
                 className="border rounded-lg p-4 flex justify-between items-center"
               >
                 <div>
@@ -116,20 +112,18 @@ const ChecklistModal = ({ isOpen, onClose, projectId }) => {
                   )}
                 </div>
 
-                <div className="text-sm">
-                  <label className="cursor-pointer text-blue-600 font-medium hover:underline">
-                    {item.status === "submitted"
-                      ? "Replace file"
-                      : "Upload file"}
-                    <input
-                      type="file"
-                      accept=".pdf,.doc,.docx"
-                      onChange={(e) => handleFileUpload(e, item)}
-                      disabled={uploading}
-                      className="hidden"
-                    />
-                  </label>
-                </div>
+                <label className="cursor-pointer text-blue-600 font-medium hover:underline">
+                  {item.status === "submitted"
+                    ? "Replace file"
+                    : "Upload file"}
+                  <input
+                    type="file"
+                    accept=".pdf,.doc,.docx"
+                    onChange={(e) => handleFileUpload(e, item)}
+                    disabled={uploading}
+                    className="hidden"
+                  />
+                </label>
               </div>
             ))}
           </div>
@@ -139,9 +133,7 @@ const ChecklistModal = ({ isOpen, onClose, projectId }) => {
   );
 };
 
-/* =========================================================
-   DASHBOARD CARDS
-========================================================= */
+/* ================= DASHBOARD CARDS ================= */
 const DashboardCards = ({ assignProject, ideaProject, onChecklistOpen }) => {
   const renderCard = (project, title) => {
     if (!project) {
@@ -175,9 +167,7 @@ const DashboardCards = ({ assignProject, ideaProject, onChecklistOpen }) => {
     return (
       <div className="bg-white rounded-xl shadow-sm border hover:shadow-md transition p-6 flex flex-col">
         <div className="flex items-center justify-between mb-3">
-          <h2 className="text-lg font-semibold text-slate-800">
-            {title}
-          </h2>
+          <h2 className="text-lg font-semibold text-slate-800">{title}</h2>
           <span
             className={`text-xs px-3 py-1 rounded-full font-medium ${statusColor}`}
           >
@@ -196,26 +186,6 @@ const DashboardCards = ({ assignProject, ideaProject, onChecklistOpen }) => {
           <p>
             <span className="font-medium">Mentor:</span> {mentorName}
           </p>
-
-          {project.teamMembers?.length > 0 && (
-            <div>
-              <p className="font-medium mb-1">Team Members:</p>
-              <ul className="pl-4 list-disc space-y-1 text-slate-600">
-                {project.teamMembers.map((m) => (
-                  <li key={m._id}>
-                    {m.name} ({m.rollno})
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-
-          {project.teamLead && (
-            <p>
-              <span className="font-medium">Team Lead:</span>{" "}
-              {project.teamLead.name} ({project.teamLead.email})
-            </p>
-          )}
         </div>
 
         <div className="mt-6">
@@ -238,17 +208,15 @@ const DashboardCards = ({ assignProject, ideaProject, onChecklistOpen }) => {
   );
 };
 
-/* =========================================================
-   MAIN STUDENT DASHBOARD
-========================================================= */
+/* ================= MAIN DASHBOARD ================= */
 const StudentDashboard = () => {
   const [section, setSection] = useState("dashboard");
   const [assignedProject, setAssignedProject] = useState(null);
   const [ideaProject, setIdeaProject] = useState(null);
-  const [checklist, setChecklist] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [checklistOpenId, setChecklistOpenId] = useState(null);
+  const [checklist, setChecklist] = useState([]);
 
   useEffect(() => {
     if (section !== "dashboard") return;
@@ -256,17 +224,16 @@ const StudentDashboard = () => {
     const fetchDashboardData = async () => {
       setLoading(true);
       setError("");
-
       try {
-        const [project, idea, checklistData] = await Promise.all([
+        const [project, idea, checklistRes] = await Promise.all([
           getMyAssignedProject(),
           getMyIdeaProject(),
-          getChecklist(),
+          api.get("/student/project/checklist"),
         ]);
 
         setAssignedProject(project);
         setIdeaProject(idea);
-        setChecklist(checklistData.checklist || []);
+        setChecklist(checklistRes.data.checklist || []);
       } catch (err) {
         console.error(err);
         setError("Failed to load project data.");
@@ -281,14 +248,14 @@ const StudentDashboard = () => {
   return (
     <div className="flex flex-col h-screen w-full bg-gray-100">
       <Navbar />
-
       <div className="flex flex-1 overflow-hidden">
         <SideMenu activeMenu={section} setSection={setSection} />
-
         <main className="flex-1 overflow-y-auto">
           <div className="max-w-7xl mx-auto px-6 py-6">
             {loading ? (
-              <div className="text-center py-20">Loading...</div>
+              <div className="text-center py-20 text-slate-500">
+                Loading...
+              </div>
             ) : error ? (
               <div className="text-center py-20 text-red-500">
                 {error}
@@ -303,12 +270,14 @@ const StudentDashboard = () => {
                 <DashboardCards
                   assignProject={assignedProject}
                   ideaProject={ideaProject}
-                  onChecklistOpen={(id) => setChecklistOpenId(id)}
+                  onChecklistOpen={(projectId) =>
+                    setChecklistOpenId(projectId)
+                  }
                 />
 
                 {checklistOpenId && (
                   <ChecklistModal
-                    isOpen={true}
+                    isOpen={!!checklistOpenId}
                     onClose={() => setChecklistOpenId(null)}
                     projectId={checklistOpenId}
                   />

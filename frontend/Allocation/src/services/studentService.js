@@ -147,7 +147,7 @@ export const assignMentorToProject = async ({ projectId, mentorId }) => {
 export const getChecklist = async () => {
   try {
     const res = await api.get("/student/project/checklist");
-    return res.data.checklist || [];
+    return res.data; // ✅ return full object
   } catch (error) {
     console.error("Error fetching checklist:", error);
     throw new Error(
@@ -227,8 +227,6 @@ export const getForm3 = async () => {
   const res = await api.get("/student/form3");
   return res.data;
 };
-
-
 
 export const submitForm3Week = async (formData) => {
   try {
