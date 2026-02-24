@@ -20,8 +20,6 @@ const StudentChecklist = ({ isOpen, onClose, projectId }) => {
         params: { projectId },
       });
 
-      console.log("Checklist API response:", res.data);
-
       // 🔥 Production-safe handling
       const data =
         res.data?.checklist ??
