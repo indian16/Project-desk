@@ -14,14 +14,17 @@ const StudentPipeline = ({ project, checklist }) => {
     },
     {
       label: "Interview Passed",
-      completed: project.status?.toLowerCase().includes("interview"),
+      completed:
+        project.status === "interview_passed" ||
+        project.status === "approved_by_mentor",
     },
     {
       label: "Mentor Assigned",
       completed:
-        !!project.selectedMentor ||
-        !!project.approvedMentor ||
-        !!project.mentor,
+        !!project.confirmedMentor ||
+        !!project.selectedMentor1 ||
+        !!project.selectedMentor2 ||
+        !!project.selectedMentor3,
     },
     {
       label: "Checklist Completed",
@@ -29,10 +32,10 @@ const StudentPipeline = ({ project, checklist }) => {
         safeChecklist.length > 0 &&
         safeChecklist.every((item) => item?.status === "submitted"),
     },
-    {
-      label: "Final Approval",
-      completed: project.status?.toLowerCase().includes("approved"),
-    },
+    // {
+    //   label: "Final Approval",
+    //   completed: project.status === "approved_by_mentor",
+    // },
   ];
 
   const completedSteps = steps.filter((s) => s.completed).length;
@@ -41,45 +44,44 @@ const StudentPipeline = ({ project, checklist }) => {
 
   return (
     <div className="bg-white border rounded-xl p-6 shadow-sm mb-6">
-      <div className="flex justify-between items-center mb-4">
-        <h3 className="text-lg font-semibold text-slate-800">
-          Project Progress
-        </h3>
-        <span className="text-sm font-semibold text-blue-600">
-          {percentage}% Complete
-        </span>
-      </div>
+      <h3 className="text-lg font-semibold text-slate-800 mb-6">
+        Project Progress
+      </h3>
 
-      <div className="w-full bg-slate-200 rounded-full h-2 mb-5">
+      <div className="flex items-center justify-between relative">
+        {/* Progress Line */}
+        <div className="absolute top-4 left-0 w-full h-1 bg-slate-200"></div>
+
         <div
-          className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+          className="absolute top-4 left-0 h-1 bg-blue-600 transition-all duration-500"
           style={{ width: `${percentage}%` }}
-        />
-      </div>
+        ></div>
 
-      <ul className="space-y-3">
         {steps.map((step, index) => (
-          <li key={index} className="flex items-center gap-3">
-            <span
-              className={`w-3 h-3 rounded-full ${
-                step.completed ? "bg-green-500" : "bg-slate-300"
-              }`}
-            />
-            <span
-              className={`text-sm ${
+          <div key={index} className="flex flex-col items-center relative z-10">
+            <div
+              className={`w-8 h-8 flex items-center justify-center rounded-full text-xs font-bold ${
                 step.completed
-                  ? "text-slate-800 font-medium"
-                  : "text-slate-500"
+                  ? "bg-green-500 text-white"
+                  : "bg-slate-300 text-slate-600"
+              }`}
+            >
+              {index + 1}
+            </div>
+
+            <span
+              className={`mt-2 text-xs text-center ${
+                step.completed ? "text-slate-800 font-medium" : "text-slate-500"
               }`}
             >
               {step.label}
             </span>
-          </li>
+          </div>
         ))}
-      </ul>
+      </div>
 
       {nextStep && (
-        <div className="mt-5 bg-blue-50 border border-blue-200 rounded-lg p-3">
+        <div className="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-3">
           <p className="text-sm text-blue-800">
             <strong>Next Task:</strong> {nextStep.label}
           </p>

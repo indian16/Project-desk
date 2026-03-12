@@ -35,14 +35,15 @@ export const submitProjectBankForm = async (formData) => {
     };
 
     const res = await api.post("/student/submit-bank", payload);
-    return res.data.data; 
+    return res.data.data;
   } catch (error) {
     console.error("Error submitting project bank form:", error);
     throw new Error(
-      error.response?.data?.message || "Failed to submit project bank form"
+      error.response?.data?.message || "Failed to submit project bank form",
     );
   }
 };
+
 // Submit project idea form
 export const submitProjectIdeaForm = async (formData) => {
   try {
@@ -63,7 +64,7 @@ export const submitProjectIdeaForm = async (formData) => {
   } catch (error) {
     console.error("Error submitting project idea:", error);
     throw new Error(
-      error.response?.data?.message || "Failed to submit project idea"
+      error.response?.data?.message || "Failed to submit project idea",
     );
   }
 };
@@ -76,7 +77,7 @@ export const getMyIdeaProject = async () => {
   } catch (error) {
     console.error("Error fetching idea project:", error);
     throw new Error(
-      error.response?.data?.message || "Failed to fetch idea project"
+      error.response?.data?.message || "Failed to fetch idea project",
     );
   }
 };
@@ -89,19 +90,19 @@ export const getMyAssignedProject = async () => {
   } catch (error) {
     console.error("Error fetching assigned project:", error);
     throw new Error(
-      error.response?.data?.message || "Failed to fetch assigned project"
+      error.response?.data?.message || "Failed to fetch assigned project",
     );
   }
 };
 
 export const getMentorList = async () => {
   try {
-    const res = await api.get("/student/mentors"); // API endpoint
-    // ensure it's an array
+    const res = await api.get("/student/mentors");
+
     if (Array.isArray(res.data)) {
       return res.data;
     } else if (res.data && Array.isArray(res.data.mentors)) {
-      return res.data.mentors; // in case backend wraps data
+      return res.data.mentors;
     } else {
       console.warn("Unexpected mentor data:", res.data);
       return [];
@@ -109,6 +110,27 @@ export const getMentorList = async () => {
   } catch (err) {
     console.error("Error fetching mentors:", err);
     return [];
+  }
+};
+
+export const selectMentorsForProject = async ({
+  projectId,
+  selectedMentor1,
+  selectedMentor2,
+  selectedMentor3,
+}) => {
+  try {
+    const res = await api.post("/student/select-mentors", {
+      projectId,
+      selectedMentor1,
+      selectedMentor2,
+      selectedMentor3,
+    });
+
+    return res.data;
+  } catch (err) {
+    console.error("Error selecting mentors:", err);
+    throw new Error(err.response?.data?.message || "Failed to select mentors");
   }
 };
 
@@ -132,11 +154,12 @@ export const downloadDocument = async (id, fileName) => {
   link.remove();
 };
 
-
-
 export const assignMentorToProject = async ({ projectId, mentorId }) => {
   try {
-    const res = await api.post("/student/submit-idea", { projectId, mentor: mentorId });
+    const res = await api.post("/student/submit-idea", {
+      projectId,
+      mentor: mentorId,
+    });
     return res.data.data; // updated project
   } catch (error) {
     console.error("Error assigning mentor:", error);
@@ -151,7 +174,7 @@ export const getChecklist = async () => {
   } catch (error) {
     console.error("Error fetching checklist:", error);
     throw new Error(
-      error.response?.data?.message || "Failed to fetch checklist"
+      error.response?.data?.message || "Failed to fetch checklist",
     );
   }
 };
@@ -171,8 +194,7 @@ export const uploadChecklistFile = async (formData) => {
   } catch (error) {
     console.error("Error uploading checklist document:", error);
     throw new Error(
-      error.response?.data?.message ||
-        "Failed to upload checklist document"
+      error.response?.data?.message || "Failed to upload checklist document",
     );
   }
 };
@@ -183,9 +205,7 @@ export const saveForm1 = async (formData) => {
     return res.data;
   } catch (error) {
     console.error("Error saving Form 1:", error);
-    throw new Error(
-      error.response?.data?.message || "Failed to save Form 1"
-    );
+    throw new Error(error.response?.data?.message || "Failed to save Form 1");
   }
 };
 
@@ -195,14 +215,12 @@ export const getMyForm1 = async () => {
     return res.data;
   } catch (error) {
     console.error("Error fetching Form 1:", error);
-    throw new Error(
-      error.response?.data?.message || "Error fetching Form 1"
-    );
+    throw new Error(error.response?.data?.message || "Error fetching Form 1");
   }
 };
 
 // ✅ Save or update Form 2
-export const  saveForm2 = async (formData) => {
+export const saveForm2 = async (formData) => {
   try {
     const res = await api.post("/student/form2/save", formData);
     return res.data;
@@ -213,13 +231,15 @@ export const  saveForm2 = async (formData) => {
 };
 
 // ✅ Get all Form 2 entries for the logged-in student's project
-export const  getForm2ByProject = async () => {
+export const getForm2ByProject = async () => {
   try {
     const res = await api.get("/student/form2/project");
     return res.data;
   } catch (error) {
     console.error("Error fetching Form 2 data:", error);
-    throw new Error(error.response?.data?.message || "Failed to fetch Form 2 data");
+    throw new Error(
+      error.response?.data?.message || "Failed to fetch Form 2 data",
+    );
   }
 };
 
@@ -234,6 +254,8 @@ export const submitForm3Week = async (formData) => {
     return res.data;
   } catch (error) {
     console.error("Error submitting Form 3 week:", error);
-    throw new Error(error.response?.data?.message || "Failed to submit Form 3 week");
+    throw new Error(
+      error.response?.data?.message || "Failed to submit Form 3 week",
+    );
   }
 };

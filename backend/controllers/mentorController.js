@@ -3,13 +3,39 @@ const AssignedProject = require("../models/AssignedProject");
 const Document = require("../models/Document");
 const ProjectIdea = require("../models/ProjectIdea");
 
-// ====================== GET MENTOR PROJECT ======================
+const getDocuments = async (req, res) => {
+  try {
+    const docs = await Document.find().sort({ createdAt: -1 });
+    res.status(200).json(docs);
+  } catch (error) {
+    console.error("Get Documents Error:", error);
+    res.status(500).json({ message: "Server error while fetching documents" });
+  }
+};
+
+// 📌 Download a document by ID for students
+const downloadDocument = async (req, res) => {
+  try {
+    const doc = await Document.findById(req.params.id);
+    if (!doc) return res.status(404).json({ message: "Document not found" }); 
+    res.download(doc.filePath, doc.fileName);
+  } catch (error) {
+    console.error("Download Document Error:", error);
+    res.status(500).json({ message: "Server error while downloading document" });
+  }
+};
 
 const getMentorProject = async (req, res) => {
   try {
     const mentorId = req.user.id;
 
-    const project = await AssignedProject.findOne({ selectedMentor: mentorId })
+    const project = await AssignedProject.findOne({
+      $or: [
+        { selectedMentor: mentorId },
+        { selectedMentor2: mentorId },
+        { selectedMentor3: mentorId },
+      ],
+    })
       .populate("projectId") // details from ProjectBank
       .populate("student", "name email") // student details
       .populate("teamMembers", "name email") // team members details
@@ -39,137 +65,77 @@ const getMentorProject = async (req, res) => {
 const reviewAssignedProject = async (req, res) => {
   try {
     const mentorId = req.user.id;
-    const { action } = req.body; // "approve" or "reject"
+    const { action, reason } = req.body;
 
     if (!["approve", "reject"].includes(action)) {
-      return res.status(400).json({ success: false, message: "Invalid action" });
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid action" });
     }
 
-    // Find the pending project assigned to this mentor
+    if (action === "reject" && (!reason || reason.trim() === "")) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Rejection reason is required" });
+    }
+
     const project = await AssignedProject.findOne({
-      selectedMentor: mentorId,
-      status: "pending",
+      $or: [
+        { selectedMentor: mentorId },
+        { selectedMentor2: mentorId },
+        { selectedMentor3: mentorId },
+      ],
     });
 
     if (!project) {
       return res.status(404).json({
         success: false,
-        message: "No pending project assigned to you.",
+        message: "No project assigned to you.",
       });
     }
 
-    // Update status and approved mentor
-    project.status = action;
+    // ✅ VERY IMPORTANT FIX
+    if (project.status !== "pending") {
+      return res.status(400).json({
+        success: false,
+        message: "Project already approved by another mentor",
+      });
+    }
+
+    project.status = action; // stays same as your DB
     project.approvedMentor = action === "approve" ? mentorId : null;
+    project.rejectionReason = action === "reject" ? reason : null;
 
     await project.save();
-
-    // Populate related fields before sending response
-    const updatedProject = await AssignedProject.findById(project._id)
-      .populate("projectId") // ProjectBank details
-      .populate("student", "name email") // student details
-      .populate("teamMembers", "name email") // team members
-      .populate("selectedMentor", "name email") // selected mentor
-      .populate("approvedMentor", "name email"); // approved mentor
 
     res.json({
       success: true,
       message: `Project ${action}d successfully`,
-      project: updatedProject,
+      project,
     });
+
   } catch (error) {
     console.error("Error reviewing project:", error);
     res.status(500).json({ success: false, message: "Server error" });
   }
 };
 
-// 📌 Get all documents for students
-const getDocuments = async (req, res) => {
-  try {
-    const docs = await Document.find().sort({ createdAt: -1 });
-    res.status(200).json(docs);
-  } catch (error) {
-    console.error("Get Documents Error:", error);
-    res.status(500).json({ message: "Server error while fetching documents" });
-  }
-};
-
-// 📌 Download a document by ID for students
-const downloadDocument = async (req, res) => {
-  try {
-    const doc = await Document.findById(req.params.id);
-    if (!doc) return res.status(404).json({ message: "Document not found" }); 
-    res.download(doc.filePath, doc.fileName);
-  } catch (error) {
-    console.error("Download Document Error:", error);
-    res.status(500).json({ message: "Server error while downloading document" });
-  }
-};
-
-const updateForm3MentorMarks = async (req, res) => {
-  try {
-    const { formId, weekNumber, mentorMarks } = req.body;
-
-    if (!formId || weekNumber == null || mentorMarks == null) {
-      return res.status(400).json({ message: "Missing required fields" });
-    }
-
-    // Find the Form3 by ID
-    const form = await Form3.findById(formId);
-    if (!form) {
-      return res.status(404).json({ message: "Form3 not found" });
-    }
-
-    // Update the mentor marks for the specific week
-    const weekIndex = form.weeks.findIndex(w => w.weekNumber === weekNumber);
-    if (weekIndex === -1) {
-      return res.status(404).json({ message: "Week not found in Form3" });
-    }
-
-    form.weeks[weekIndex].mentorMarks = mentorMarks;
-
-    // Save the updated form
-    await form.save();
-
-    res.status(200).json({
-      message: `Mentor marks updated for week ${weekNumber}`,
-      form
-    });
-  } catch (err) {
-    console.error("Error updating mentor marks:", err);
-    res.status(500).json({ message: "Server error", error: err.message });
-  }
-};
-
-const getAssignedForms = async (req, res) => {
-  try {
-    const mentorId = req.user.id; // logged-in mentor
-
-    // Step 1: find all projects assigned to this mentor
-    const projects = await ProjectIdea.find({ mentor: mentorId }, "_id");
-
-    const projectIds = projects.map(p => p._id);
-
-    // Step 2: find all Form3 submissions for those projects
-    const forms = await Form3.find({ projectId: { $in: projectIds } })
-      .populate("projectId studentId"); // optional for frontend display
-
-    res.status(200).json({ forms });
-  } catch (err) {
-    console.error("Error fetching assigned Form3 submissions:", err);
-    res.status(500).json({ error: "Server error fetching Form3" });
-  }
-};
-
 // ================= GET MENTOR IDEA PROJECTS =================
+
 const getMentorIdeaProjects = async (req, res) => {
   try {
     const mentorId = req.user.id;
 
-    const projects = await ProjectIdea.find({ mentor: mentorId })
-      .populate("teamMembers", "name email") // populate team members
-      .populate("mentor", "name email")      // populate mentor details
-      .populate("teamLead.id", "name email"); // populate team lead
+    const projects = await ProjectIdea.find({
+      $or: [
+        { selectedMentor1: mentorId },
+        { selectedMentor2: mentorId },
+        { selectedMentor3: mentorId },
+      ],
+    })
+      .populate("teamMembers", "name email")
+      .populate("teamLead.id", "name email")
+      
 
     if (!projects || projects.length === 0) {
       return res.status(404).json({
@@ -182,6 +148,7 @@ const getMentorIdeaProjects = async (req, res) => {
       success: true,
       projects,
     });
+
   } catch (error) {
     console.error("Error fetching mentor idea projects:", error);
     res.status(500).json({
@@ -191,13 +158,19 @@ const getMentorIdeaProjects = async (req, res) => {
   }
 };
 // ====================== REVIEW IDEA PROJECT (APPROVE/REJECT) ======================
+
 const reviewIdeaProject = async (req, res) => {
   try {
     const { id } = req.params;
-    const { action, feedback } = req.body; // optional feedback
+    const { action, feedback } = req.body;
+    
+    const mentorId = req.user._id.toString();
 
     if (!["approve", "reject"].includes(action)) {
-      return res.status(400).json({ success: false, message: "Invalid action" });
+      return res.status(400).json({
+        success: false,
+        message: "Invalid action",
+      });
     }
 
     const project = await ProjectIdea.findById(id);
@@ -205,41 +178,80 @@ const reviewIdeaProject = async (req, res) => {
     if (!project || project.status !== "interview_passed") {
       return res.status(400).json({
         success: false,
-        message: "Project cannot be reviewed by mentor yet",
+        message: "Project cannot be reviewed yet",
       });
     }
 
-    project.status = action === "approve" ? "approved_by_mentor" : "rejected_by_mentor";
 
+    const selectedMentors = [
+      project.selectedMentor1,
+      project.selectedMentor2,
+      project.selectedMentor3,
+    ]
+      .filter(Boolean)
+      .map(id => id.toString());
+    
+    if (!selectedMentors.includes(mentorId)) {
+      return res.status(403).json({
+        success: false,
+        message: "You are not selected as mentor for this project",
+      });
+    }
+
+    // ✅ If already approved by another mentor
+    if (project.confirmedMentor) {
+      return res.status(400).json({
+        success: false,
+        message: "Project already approved by another mentor",
+      });
+    }
+
+    // ✅ Save feedback
     project.feedbacks.push({
-      mentor: req.user.id,
+      mentor: mentorId,
       feedback: feedback || "",
     });
+
+    // ✅ If approve → confirm mentor
+    if (action === "approve") {
+      project.status = "approved_by_mentor";
+      project.confirmedMentor = mentorId; // 🔥 Only one mentor stored
+    }
+
+    // ✅ If reject → just store feedback (no status change unless you want)
+    if (action === "reject") {
+      project.status = "interview_passed"; 
+      // keep status same so other mentors can still approve
+    }
 
     await project.save();
 
     const updatedProject = await ProjectIdea.findById(id)
+     
       .populate("teamMembers", "name email")
       .populate("teamLead.id", "name email")
-      .populate("mentor", "name email");
+      .populate("confirmedMentor", "name email");
 
     res.json({
       success: true,
       message: `Project ${action}d successfully`,
       project: updatedProject,
     });
+
   } catch (err) {
     console.error("Error reviewing idea project:", err);
-    res.status(500).json({ success: false, message: "Server error" });
+    res.status(500).json({
+      success: false,
+      message: "Server error",
+    });
   }
 };
-module.exports = { 
-  getMentorProject, 
-  reviewAssignedProject,
+
+module.exports = {
   getDocuments,
   downloadDocument,
-  updateForm3MentorMarks,
-  getAssignedForms,
+  getMentorProject,
+  reviewAssignedProject,
   getMentorIdeaProjects,
-  reviewIdeaProject
-};
+  reviewIdeaProject,
+}

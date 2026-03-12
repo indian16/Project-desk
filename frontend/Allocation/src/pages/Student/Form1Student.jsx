@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import axios from "axios";
+import api from "../../utils/axios";
 
 const Form1Student = () => {
   const [formData, setFormData] = useState({
@@ -27,9 +27,7 @@ const Form1Student = () => {
   useEffect(() => {
     const fetchForm = async () => {
       try {
-        const res = await axios.get("/api/student/form1", {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        const res = await api.get("/student/form1");
 
         if (res.data.form1) {
           setFormData(res.data.form1); // ✅ auto-fill
@@ -155,11 +153,10 @@ const Form1Student = () => {
     setMessage("⏳ Saving form...");
 
     try {
-      const res = await axios.post(
-        "http://localhost:8000/api/student/form1/save",
-        { formData, submitType },
-        { headers: { Authorization: `Bearer ${token}` } },
-      );
+      const res = await api.post("/student/form1/save", {
+        formData,
+        submitType,
+      });
 
       if (res.data.success) {
         let msg = "✅ Form saved!";

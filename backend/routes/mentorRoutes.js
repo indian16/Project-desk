@@ -2,27 +2,27 @@ const express = require("express");
 const router = express.Router();
 const { verifyToken, checkRole } = require("../middleware/authMiddleware");
 const {
-  getMentorProject,
-  reviewAssignedProject,
   getDocuments,
   downloadDocument,
-  updateForm3MentorMarks,
-  getAssignedForms,
+  getMentorProject,
+  reviewAssignedProject,
   getMentorIdeaProjects,
-  reviewIdeaProject
+  reviewIdeaProject,
 } = require("../controllers/mentorController");
 
 router.use(verifyToken, checkRole(["mentor"]));
 
-// project bank
-router.get("/project", getMentorProject);
-router.put("/project/review", reviewAssignedProject);
+
 router.get("/documents", getDocuments);
 router.get("/documents/download/:id", downloadDocument);
 
-// Form3 
-router.get("/forms3", verifyToken,  getAssignedForms);
-router.put("/forms3/week", verifyToken,  updateForm3MentorMarks);
+// GET /api/mentor/project
+// Mentor automatically sees the project selected by the student
+router.get("/project", verifyToken, getMentorProject);
+
+// PATCH /api/mentor/project/review
+// Mentor approves or rejects the assigned project
+router.patch("/project/review", verifyToken, reviewAssignedProject);
 
 // ===== Idea Projects =====
 router.get("/idea-projects", verifyToken, getMentorIdeaProjects);

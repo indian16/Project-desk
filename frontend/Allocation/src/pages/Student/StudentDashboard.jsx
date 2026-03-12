@@ -19,9 +19,16 @@ import {
   getMyIdeaProject,
 } from "../../services/studentService";
 
+import ProjectDetails from "./ProjectDetails";
+
 /* ================= DASHBOARD CARDS ================= */
-const DashboardCards = ({ assignProject, ideaProject, onChecklistOpen }) => {
-  const renderCard = (project, title) => {
+const DashboardCards = ({
+  assignProject,
+  ideaProject,
+  onChecklistOpen,
+  onSelectMentorClick,
+}) => {
+  const renderCard = (project, title, type) => {
     if (!project) {
       return (
         <div className="bg-white rounded-xl shadow-sm border p-6">
@@ -32,13 +39,12 @@ const DashboardCards = ({ assignProject, ideaProject, onChecklistOpen }) => {
     }
 
     const mentorName =
-      project.selectedMentor?.name ||
-      project.approvedMentor?.name ||
-      project.mentor?.name ||
+      project.confirmedMentor?.name ||
+      project.selectedMentor1?.name ||
       "Not assigned";
 
     const statusText = project.status
-      ? project.status.replace("_", " ")
+      ? project.status.replaceAll("_", " ")
       : "Pending";
 
     const statusColor = statusText.toLowerCase().includes("pending")
@@ -62,26 +68,62 @@ const DashboardCards = ({ assignProject, ideaProject, onChecklistOpen }) => {
         <h3 className="text-base font-semibold text-slate-900 mb-1">
           {project.title}
         </h3>
+
         <p className="text-sm text-slate-600 mb-4 line-clamp-2">
           {project.description}
         </p>
-        <p className="text-sm text-slate-600 mb-4 line-clamp-2">
+
+        <p className="text-sm text-slate-600 mb-4">
           <span className="font-medium">Technology:</span> {project.technology}
         </p>
 
-        <div className="space-y-2 text-sm text-slate-700">
+        <div className="space-y-2 text-sm text-slate-700 mb-4">
           <p>
             <span className="font-medium">Mentor:</span> {mentorName}
           </p>
         </div>
 
-        <div className="mt-6">
+        {/* Buttons */}
+        <div className="mt-auto flex flex-col gap-3">
+          {/* View Checklist Button (for both cards) */}
           <button
             onClick={() => onChecklistOpen(project._id)}
             className="w-full bg-blue-600 text-white text-sm font-medium py-2 rounded-lg hover:bg-blue-700 transition"
           >
             View Checklist
           </button>
+
+          {/* Select Mentor Button (ONLY for Idea Project) */}
+          {type === "idea" &&
+            ["interview_passed", "approved_by_mentor"].includes(
+              project.status,
+            ) && (
+              <button
+                onClick={() => onSelectMentorClick()}
+                disabled={project.selectedMentor1}
+                className={`w-full text-sm font-medium py-2 rounded-lg ${
+                  project.selectedMentor1
+                    ? "bg-gray-400 cursor-not-allowed"
+                    : "bg-green-600 hover:bg-green-700 text-white"
+                }`}
+              >
+                {project.selectedMentor1
+                  ? "Mentors Selected"
+                  : "Select Mentors"}
+              </button>
+            )}
+
+          {type === "idea" &&
+            !["interview_passed", "approved_by_mentor"].includes(
+              project.status,
+            ) && (
+              <button
+                disabled
+                className="w-full bg-gray-400 text-white text-sm font-medium py-2 rounded-lg cursor-not-allowed"
+              >
+                Interview Not Passed
+              </button>
+            )}
         </div>
       </div>
     );
@@ -89,8 +131,8 @@ const DashboardCards = ({ assignProject, ideaProject, onChecklistOpen }) => {
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-      {renderCard(ideaProject, "My Project Idea")}
-      {renderCard(assignProject, "My Assigned Project")}
+      {renderCard(ideaProject, "My Project Idea", "idea")}
+      {renderCard(assignProject, "My Assigned Project", "assigned")}
     </div>
   );
 };
@@ -111,6 +153,7 @@ const StudentDashboard = () => {
     const fetchDashboardData = async () => {
       setLoading(true);
       setError("");
+
       try {
         const [project, idea] = await Promise.all([
           getMyAssignedProject(),
@@ -119,6 +162,7 @@ const StudentDashboard = () => {
 
         setAssignedProject(project);
         setIdeaProject(idea);
+
         const activeProject = idea || project;
 
         if (activeProject?._id) {
@@ -127,7 +171,6 @@ const StudentDashboard = () => {
           });
 
           const data = res.data?.checklist ?? res.data ?? [];
-
           setChecklist(Array.isArray(data) ? data : []);
         }
       } catch (err) {
@@ -144,8 +187,10 @@ const StudentDashboard = () => {
   return (
     <div className="flex flex-col h-screen w-full bg-gray-100">
       <Navbar />
+
       <div className="flex flex-1 overflow-hidden">
         <SideMenu activeMenu={section} setSection={setSection} />
+
         <main className="flex-1 overflow-y-auto">
           <div className="max-w-7xl mx-auto px-6 py-6">
             {loading ? (
@@ -163,18 +208,26 @@ const StudentDashboard = () => {
                   assignProject={assignedProject}
                   ideaProject={ideaProject}
                   onChecklistOpen={(projectId) => setChecklistOpenId(projectId)}
+                  onSelectMentorClick={() => setSection("projectIdea")}
                 />
 
                 {checklistOpenId && (
                   <StudentChecklist
-                    isOpen={!!checklistOpenId}
+                    isOpen={true}
                     onClose={() => setChecklistOpenId(null)}
                     projectId={checklistOpenId}
                   />
                 )}
               </>
             ) : section === "projectIdea" ? (
-              <ProjectIdeaForm />
+              ideaProject ? (
+                <ProjectDetails
+                  project={ideaProject}
+                  onClose={() => setSection("dashboard")} // ✅ FIXED
+                />
+              ) : (
+                <ProjectIdeaForm />
+              )
             ) : section === "projectBank" ? (
               <ProjectBankForm />
             ) : section === "mentorList" ? (

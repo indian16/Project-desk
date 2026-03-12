@@ -303,7 +303,6 @@ const getPendingIdeasForHead = async (req, res) => {
 
     const pendingIdeas = await ProjectIdea.find(filter)
       .populate("teamMembers", "name email rollno")
-      .populate("mentor", "name email");
     res.status(200).json(pendingIdeas);
   } catch (error) {
     console.error("Error fetching pending ideas:", error.message);
@@ -311,7 +310,7 @@ const getPendingIdeasForHead = async (req, res) => {
   }
 };
 
-// ✅ Approve/Reject Idea
+// ✅ Approve/Reject Idea buttons
 const reviewIdeaByHead = async (req, res) => {
   const { id } = req.params;
   const { action, reason } = req.body;
@@ -365,7 +364,6 @@ const getReviewedIdeasForHead = async (req, res) => {
 
     const reviewedIdeas = await ProjectIdea.find(filter)
       .populate("teamMembers", "name email rollno")
-      .populate("mentor", "name email");
 
     res.status(200).json(reviewedIdeas);
   } catch (error) {
@@ -474,7 +472,6 @@ const getAllInterviews = async (req, res) => {
 
     const ideas = await ProjectIdea.find(filter)
       .populate("teamMembers", "name email rollno")
-      .populate("mentor", "name email");
 
     if (!ideas || ideas.length === 0) {
       return res.status(404).json({ message: "No interviews found" });

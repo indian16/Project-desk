@@ -1,26 +1,5 @@
 import api from "../utils/axios";
 
-export const getMentorProject = async () => {
-  try {
-    const res = await api.get("/mentor/project"); // no projectId needed
-    return res.data;
-  } catch (err) {
-    console.error("Error fetching mentor project:", err);
-    throw err.response?.data || err;
-  }
-};
-
-// Approve or reject the project
-export const reviewAssignedProject = async (action) => {
-  try {
-    const res = await api.put("/mentor/project/review", { action });
-    return res.data;
-  } catch (err) {
-    console.error("Error reviewing project:", err);
-    throw err.response?.data || err;
-  }
-};
-
 export const getDocuments = async () => {
   const res = await api.get("/mentor/documents");
   return res.data;
@@ -41,23 +20,23 @@ export const downloadDocument = async (id, fileName) => {
   link.remove();
 };
 
-export const getAssignedForms = async () => {
+export const getMentorProject = async () => {
   try {
-    const res = await api.get("/mentor/forms3");
-    return res.data.forms || [];
-  } catch (err) {
-    console.error("Error fetching assigned Form3 submissions:", err);
-    throw err.response?.data || err;
-  }
-}
-
-export const updateMentorMarks = async (formId, weekNumber, mentorMarks) => {
-  try {
-    const payload = { formId, weekNumber, mentorMarks };
-    const res = await api.put("/mentor/forms3/week", payload);
+    const res = await api.get("/mentor/project"); // no projectId needed
     return res.data;
   } catch (err) {
-    console.error("Error updating mentor marks:", err);
+    console.error("Error fetching mentor project:", err);
+    throw err.response?.data || err;
+  }
+};
+
+// Approve or reject the project
+export const reviewAssignedProject = async (action) => {
+  try {
+    const res = await api.patch("/mentor/project/review", { action });
+    return res.data;
+  } catch (err) {
+    console.error("Error reviewing project:", err);
     throw err.response?.data || err;
   }
 };
@@ -84,3 +63,4 @@ export const reviewIdeaProject = async (id, action, feedback) => {
     throw err.response?.data || err;
   }
 };
+

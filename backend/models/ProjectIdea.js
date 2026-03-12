@@ -16,12 +16,25 @@ const projectIdeaSchema = new Schema(
     branch : { type: String, required: true },
     section : { type: String, required: true },
     group : { type: String, required: true },
-    mentor: { type: mongoose.Schema.Types.ObjectId, 
-      ref: "Mentor", 
-      // Required only after Head interview passed
-      required: function () {
-        return ["interview_passed"].includes(this.status);
-      },
+    selectedMentor1: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Mentor",
+    },
+    
+    selectedMentor2: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Mentor",
+    },
+    
+    selectedMentor3: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Mentor",
+    },
+    
+    confirmedMentor: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Mentor",
+      default: null,
     },
     status: {
       type: String,

@@ -1,9 +1,8 @@
 import React, { useState } from "react";
 import SideMenu from "../../components/SideMenu";
 import Documentation from "./Documentation";
-import AssignedProject from "./AssignedProject";
+import BankProject from "./BankProject";
 import MentorMessage from "./MentorMessage";
-import Form3Mentor from "./Form3Mentor";
 import IdeaProject from "./IdeaProject";
 import Navbar from "../../components/Navbar";
 
@@ -22,11 +21,11 @@ const MentorDashboard = () => {
           </div>
         );
 
-      case "mentorIdeas":
+      case "mentorIdeaProjects":
         return <IdeaProject />;
 
       case "mentorBankProjects":
-        return <AssignedProject />;
+        return <BankProject />;
 
       case "documents":
         return <Documentation />;

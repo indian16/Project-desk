@@ -9,6 +9,7 @@ const {
   getMyAssignedProject,
   getProjectBankList,
   getMentorList,
+  selectMentorsForProject,
   getDocuments,
   downloadDocument,
   getChecklist,
@@ -25,12 +26,13 @@ const {
 router.use(verifyToken, checkRole(["student"]));
 
 // ✅ Existing routes
+router.post("/submit-idea", submitProjectIdeaForm);
 router.get("/project-bank", getProjectBankList);
 router.post("/submit-bank", submitProjectBankForm);
 router.get("/idea-project", getMyIdeaProject);
 router.get("/assigned-project", getMyAssignedProject);
-router.post("/submit-idea", submitProjectIdeaForm);
 router.get("/mentors", getMentorList);
+router.post("/select-mentors", selectMentorsForProject);
 router.get("/documents", getDocuments);
 router.get("/documents/download/:id", downloadDocument);
 

@@ -168,7 +168,6 @@ const SideMenu = ({ activeMenu, setSection }) => {
                     label="Form 3"
                     sectionName="form3"
                   />
-                 
                 </>
               )}
 
