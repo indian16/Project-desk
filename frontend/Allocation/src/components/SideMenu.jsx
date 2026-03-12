@@ -13,7 +13,6 @@ import {
   LogOut,
   ClipboardList,
   Settings,
-  
   ChevronRight,
 } from "lucide-react";
 
@@ -116,6 +115,11 @@ const SideMenu = ({ activeMenu, setSection }) => {
                     label="Settings"
                     sectionName="HeadSettings"
                   />
+                  <MenuItem
+                    icon={Settings}
+                    label="New Head"
+                    sectionName="Register"
+                  />
                 </>
               )}
 
@@ -146,13 +150,13 @@ const SideMenu = ({ activeMenu, setSection }) => {
                     label="Documentation"
                     sectionName="documentation"
                   />
-                   <MenuItem
+                  <MenuItem
                     icon={FileSpreadsheet}
                     label="Messages"
                     sectionName="messages"
                   />
                   <hr className="my-2 border-gray-200" />
-                  
+
                   <MenuItem
                     icon={FileSpreadsheet}
                     label="Form 1 (Team lead)"

@@ -5,6 +5,7 @@ const path = require("path");
 const Interview = require("../models/Interview");
 const XLSX = require("xlsx");
 const fs = require("fs");
+const Head = require("../models/Head");
 const Mentor = require("../models/Mentor");
 const ProjectBank = require("../models/ProjectBank");
 const AssignedProject = require("../models/AssignedProject");
@@ -847,9 +848,7 @@ const getNewProjectIdeaCount = async (req, res) => {
   }
 };
 
-// ======================================
 // 1️⃣ SUMMARY COUNTS
-// ======================================
 const getSummaryCounts = async (req, res) => {
   try {
     const totalIdeas = await ProjectIdea.countDocuments();
@@ -1012,6 +1011,97 @@ const getChecklistFilters = async (req, res) => {
   }
 };
 
+const registerHead = async (req, res) => {
+  try {
+    const { name, email, password } = req.body;
+
+    // Check if head already exists
+    const existingHead = await Head.findOne({ email });
+    if (existingHead) {
+      return res.status(400).json({ message: "Head already exists" });
+    }
+
+    // Hash password
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    // Create new head
+    const newHead = await Head.create({
+      name,
+      email,
+      password: hashedPassword,
+      role: "head"
+    });
+
+    res.status(201).json({
+      message: "Head registered successfully",
+      head: {
+        id: newHead._id,
+        name: newHead.name,
+        email: newHead.email,
+        role: newHead.role
+      }
+    });
+
+  } catch (error) {
+    console.error("Register Head Error:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+const getProjectDocuments = async (req, res) => {
+  try {
+    const { projectId } = req.params;
+
+    // Guard clause
+    if (!projectId || projectId === "undefined") {
+      return res.status(400).json({
+        success: false,
+        message: "Valid Project ID is required",
+      });
+    }
+
+    // 1️⃣ Fetch all checklist items (created by Head)
+    const checklistItems = await Checklist.find().lean();
+
+    // 2️⃣ Fetch student uploads for this project
+    const uploads = await StudentChecklist.find({ projectId })
+      .populate("student", "name rollNo email")
+      .populate("checklistItem", "title")
+      .sort({ uploadedAt: 1 })
+      .lean();
+
+    // 3️⃣ Group uploads under checklist items
+    const groupedData = checklistItems.map((item) => {
+      const relatedUploads = uploads.filter(
+        (u) => u.checklistItem?.toString() === item._id.toString()
+      );
+
+      return {
+        checklistId: item._id,
+        title: item.title,
+        uploads: relatedUploads.map((u) => ({
+          uploadId: u._id,
+          student: u.student,
+          fileName: u.fileName,
+          fileUrl: `/uploads/checklist/${u.filePath.split("\\").pop()}`,
+          uploadedAt: u.uploadedAt,
+        })),
+      };
+    });
+
+    return res.status(200).json({
+      success: true,
+      data: groupedData,
+    });
+  } catch (error) {
+    console.error("Error fetching project documents:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch project documents",
+    });
+  }
+};
+
 module.exports = {
   getProjectsByYear,
   getAvailableYears,
@@ -1046,4 +1136,6 @@ module.exports = {
   getAllProjectsCombined,
   getChecklistMetrics,
   getChecklistFilters,
+  registerHead,
+  getProjectDocuments,
 };

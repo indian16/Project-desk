@@ -164,7 +164,6 @@ export const getMessages = async () => {
   return res.data?.data || [];
 };
 
-// ⭐ HEAD SIDE – CHECKLIST CONFIGURATION
 // ➕ Add Checklist Item
 export const addChecklistItem = async (data) => {
   const res = await api.post(`/head/checklist`, data);
@@ -265,6 +264,26 @@ export const deleteForm3 = async (academicYear, weekNumber) => {
     `/head/form3/${academicYear}/${weekNumber}`
   );
   return res.data;
+};
+
+// 👑 REGISTER HEAD (only head allowed)
+export const registerHead = async (data) => {
+  const res = await api.post("head/register-head", data);
+  return res.data;
+};
+
+export const getProjectDocuments = async (projectId) => {
+  try {
+    const res = await api.get(
+      `head/project-documents/${projectId}`
+    );
+
+    return res.data; 
+  
+  } catch (error) {
+    console.error("Error fetching project documents:", error);
+    throw error;
+  }
 };
 
 

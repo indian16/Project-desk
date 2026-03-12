@@ -1,3 +1,4 @@
+// src/pages/student/StudentMessage.jsx
 import React, { useEffect, useState, useRef } from "react";
 import { getMessages } from "../../services/commonService";
 

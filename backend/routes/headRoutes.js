@@ -37,6 +37,8 @@ const {
   getAllProjectsCombined,
   getChecklistMetrics,
   getChecklistFilters,
+  registerHead,
+  getProjectDocuments,
 } = require("../controllers/headController");
 const upload = multer({ dest: "uploads/" });
 
@@ -48,7 +50,11 @@ router.get("/projects", verifyToken, checkRole(["head"]), getProjectsByYear);
 router.get("/years", verifyToken, checkRole(["head"]), getAvailableYears);
 
 // File Uploads
-router.post("/upload-project-bank",upload.single("file"),uploadProjectBankExcel);
+router.post(
+  "/upload-project-bank",
+  upload.single("file"),
+  uploadProjectBankExcel,
+);
 router.post("/upload-student-list", upload.single("file"), uploadStudentList);
 router.post("/upload-mentor-list", upload.single("file"), uploadMentorList);
 router.post("/upload-document", upload.single("file"), uploadHeadDocument);
@@ -78,13 +84,17 @@ router.post("/form3", createForm3ForAllProjects);
 router.get("/form3/:academicYear", getForm3Head);
 router.delete("/form3/:academicYear/:weekNumber", deleteForm3);
 
-
 // Checklist management
 router.post("/checklist", addChecklistItem);
 router.get("/getchecklist", getChecklistItems);
 router.delete("/checklist/:id", deleteChecklistItem);
 router.get("/checklist/submissions", getAllStudentChecklistSubmissions);
-router.get("/projects-with-checklist",verifyToken,checkRole(["head"]),getProjectsWithChecklist);
+router.get(
+  "/projects-with-checklist",
+  verifyToken,
+  checkRole(["head"]),
+  getProjectsWithChecklist,
+);
 
 //frontend routes
 router.get("/all-projects-count", getAllProjectsCount);
@@ -103,6 +113,9 @@ router.get("/dashboard/summary", getSummaryCounts);
 router.get("/dashboard/projects", getAllProjectsCombined);
 
 router.get("/dashboard/checklist-metrics", getChecklistMetrics);
-router.get("/checklist/filters",getChecklistFilters);
+router.get("/checklist/filters", getChecklistFilters);
 
+// View project checklist documents (Head)
+router.post("/register-head", registerHead);
+router.get("/project-documents/:projectId", getProjectDocuments);
 module.exports = router;
