@@ -52,45 +52,43 @@ const Form3 = () => {
 
   /* ----------- FETCH EXISTING DATA ----------- */
   useEffect(() => {
-  if (!academicYear) {
-    setWeeks([{ weekNumber: 1, fromDate: "", toDate: "" }]);
-    return;
-  }
-
-  const fetchForm3 = async () => {
-    try {
-      const res = await getForm3Head(academicYear);
-
-      if (res && res.weeks?.length > 0) {
-        const formattedWeeks = res.weeks.map((w) => ({
-          weekNumber: w.weekNumber,
-          fromDate: w.fromDate
-            ? new Date(w.fromDate).toISOString().split("T")[0]
-            : "",
-          toDate: w.toDate
-            ? new Date(w.toDate).toISOString().split("T")[0]
-            : "",
-        }));
-
-        setWeeks(formattedWeeks);
-      } else {
-        // If empty weeks array
-        setWeeks([{ weekNumber: 1, fromDate: "", toDate: "" }]);
-      }
-
-    } catch (err) {
-      if (err.response?.status === 404) {
-        // VERY IMPORTANT FIX
-        setWeeks([{ weekNumber: 1, fromDate: "", toDate: "" }]);
-      } else {
-        console.error("Error fetching Form3 data:", err);
-      }
+    if (!academicYear) {
+      setWeeks([{ weekNumber: 1, fromDate: "", toDate: "" }]);
+      return;
     }
-  };
 
-  fetchForm3();
-}, [academicYear]);
+    const fetchForm3 = async () => {
+      try {
+        const res = await getForm3Head(academicYear);
 
+        if (res && res.weeks?.length > 0) {
+          const formattedWeeks = res.weeks.map((w) => ({
+            weekNumber: w.weekNumber,
+            fromDate: w.fromDate
+              ? new Date(w.fromDate).toISOString().split("T")[0]
+              : "",
+            toDate: w.toDate
+              ? new Date(w.toDate).toISOString().split("T")[0]
+              : "",
+          }));
+
+          setWeeks(formattedWeeks);
+        } else {
+          // If empty weeks array
+          setWeeks([{ weekNumber: 1, fromDate: "", toDate: "" }]);
+        }
+      } catch (err) {
+        if (err.response?.status === 404) {
+          // VERY IMPORTANT FIX
+          setWeeks([{ weekNumber: 1, fromDate: "", toDate: "" }]);
+        } else {
+          console.error("Error fetching Form3 data:", err);
+        }
+      }
+    };
+
+    fetchForm3();
+  }, [academicYear]);
 
   /* ----------- HANDLERS ----------- */
   const handleChange = (index, field, value) => {

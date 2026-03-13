@@ -1,32 +1,30 @@
 const mongoose = require("mongoose");
 const { Schema } = mongoose;
 
-// ---------------- Sub-schemas ----------------
-
+// Sub-schemas
 const toolSchema = new Schema({
-  name: String,
-  version: String,
-  type: String, // software | hardware | cloud
-  purpose: String,
+  name: { type: String },
+  version: { type: String },
+  type: { type: String },
+  purpose: { type: String },
 });
 
 const moduleSchema = new Schema({
-  name: String,
-  functionality: String,
+  name: { type: String },
+  functionality: { type: String },
 });
 
 const teamMemberSchema = new Schema({
-  name: String,
-  mobile: String,
-  expertise: String,
-  role: String, // Team Lead | Member
+  name: { type: String },
+  mobile: { type: String },
+  expertise: { type: String },
+  role: { type: String },
 });
 
-// ---------------- Main Form1 Schema ----------------
-
+// Main Form1 schema
 const form1Schema = new Schema(
   {
-    // Dynamic reference (AssignedProject / ProjectIdea)
+    // Dynamic reference for AssignedProject or ProjectIdea
     projectId: {
       type: Schema.Types.ObjectId,
       required: true,
@@ -39,43 +37,53 @@ const form1Schema = new Schema(
       enum: ["AssignedProject", "ProjectIdea"],
     },
 
-    // Team Lead (owner of the form)
     studentId: {
       type: Schema.Types.ObjectId,
       ref: "Student",
       required: true,
     },
 
-    // ---------------- Form Fields ----------------
-    branch: String,
-    section: String,
-    group: String,
-    title: String,
-    projectTrack: [String],
-    introduction: String,
+    branch: { type: String },
+    section: { type: String },
+    group: { type: String },
+    title: { type: String },
+
+    projectTrack: [{ type: String }],
+
+    introduction: { type: String },
 
     toolsTechnologies: [toolSchema],
+
     proposedModules: [moduleSchema],
+
     teamMembers: [teamMemberSchema],
 
-    mentorName: String,
-    labCoordinatorName: String,
-
-    // ---------------- Submission Flow ----------------
-    submissionStage: {
-      type: String,
-      enum: ["DRAFT", "TEAM_SUBMITTED", "MENTOR_SUBMITTED", "HEAD_SUBMITTED"],
-      default: "DRAFT",
-      index: true,
+    // ⭐ Mentor fields
+    mentorId: {
+      type: Schema.Types.ObjectId,
+      ref: "Mentor",   // assuming mentors are in User model
     },
 
-    submittedTimeline: {
-      team: { type: Date },
-      mentor: { type: Date },
-      head: { type: Date },
-    },
+    mentorName: { type: String },
 
-    // ---------------- Audit Trail ----------------
+    labCoordinatorName: { type: String },
+
+    // ⭐ Mentor decision
+status: {
+  type: String,
+  enum: ["pending", "approved_by_mentor", "rejected_by_mentor"],
+  default: "pending",
+},
+
+mentorFeedback: {
+  type: String,
+},
+
+approvedAt: {
+  type: Date,
+},
+
+    // Optional audit info
     lastEditedBy: {
       type: Schema.Types.ObjectId,
       ref: "Student",
@@ -83,16 +91,20 @@ const form1Schema = new Schema(
 
     editHistory: [
       {
-        editedBy: { type: Schema.Types.ObjectId, ref: "Student" },
-        editedAt: { type: Date, default: Date.now },
+        editedBy: {
+          type: Schema.Types.ObjectId,
+          ref: "Student",
+        },
+        editedAt: {
+          type: Date,
+          default: Date.now,
+        },
       },
     ],
   },
   { timestamps: true }
 );
 
-// Helpful index (optional but recommended)
-form1Schema.index({ projectId: 1, submissionStage: 1 });
-
 const Form1 = mongoose.model("Form1", form1Schema);
+
 module.exports = Form1;

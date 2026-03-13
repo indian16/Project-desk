@@ -615,9 +615,8 @@ const deleteChecklistItem = async (req, res) => {
 const createForm3ForAllProjects = async (req, res) => {
   try {
     let { academicYear, weeks } = req.body;
-    academicYear = academicYear.replace(/[–—]/g, "-").trim();
 
-    console.log("Incoming Data:", req.body);
+    academicYear = academicYear.replace(/[–—]/g, "-").trim();
 
     if (!academicYear) {
       return res.status(400).json({ message: "Academic year required" });
@@ -627,11 +626,35 @@ const createForm3ForAllProjects = async (req, res) => {
       return res.status(400).json({ message: "Weeks data required" });
     }
 
-    // Validate each week
+    // ✅ Validate each week
     for (let week of weeks) {
       if (!week.fromDate || !week.toDate) {
         return res.status(400).json({
           message: `Dates missing for week ${week.weekNumber}`,
+        });
+      }
+
+      const fromDate = new Date(week.fromDate);
+      const toDate = new Date(week.toDate);
+
+      if (toDate < fromDate) {
+        return res.status(400).json({
+          message: `Week ${week.weekNumber}: toDate cannot be before fromDate`,
+        });
+      }
+    }
+
+    // ✅ Sort weeks by fromDate
+    weeks.sort((a, b) => new Date(a.fromDate) - new Date(b.fromDate));
+
+    // ✅ Check overlapping weeks
+    for (let i = 1; i < weeks.length; i++) {
+      const prev = new Date(weeks[i - 1].toDate);
+      const curr = new Date(weeks[i].fromDate);
+
+      if (curr <= prev) {
+        return res.status(400).json({
+          message: `Week ${weeks[i].weekNumber} overlaps with previous week`,
         });
       }
     }
@@ -657,6 +680,7 @@ const createForm3ForAllProjects = async (req, res) => {
       message: "Form3 created successfully",
       form3,
     });
+
   } catch (error) {
     console.error("CREATE FORM3 ERROR:", error);
     res.status(500).json({

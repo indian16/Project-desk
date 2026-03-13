@@ -13,7 +13,7 @@ const form2Schema = new mongoose.Schema({
   },
   studentId: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: "User",
+    ref: "Student",
     required: true,
   },
   member: {
@@ -39,6 +39,13 @@ const form2Schema = new mongoose.Schema({
   details: {
     type: String,
     required: true,
+  },
+  approvedByMentor: {
+    type: Boolean,
+    default: false,
+  },
+  approvedAt: {
+    type: Date,
   },
   createdAt: {
     type: Date,

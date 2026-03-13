@@ -203,11 +203,6 @@ const SideMenu = ({ activeMenu, setSection }) => {
                     sectionName="documents"
                   />
                   <hr className="my-2 border-gray-200" />
-                  <MenuItem
-                    icon={FileSpreadsheet}
-                    label="Form 3"
-                    sectionName="form3m"
-                  />
                 </>
               )}
             </div>

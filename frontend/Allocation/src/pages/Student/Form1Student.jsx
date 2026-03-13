@@ -14,7 +14,8 @@ const Form1Student = () => {
     ],
     proposedModules: [{ name: "", functionality: "" }],
     teamMembers: [{ name: "", mobile: "", expertise: "", role: "" }],
-    mentorName: "",
+    mentorId: "",
+mentorName: "",
     labCoordinatorName: "",
   });
 
@@ -30,10 +31,17 @@ const Form1Student = () => {
         const res = await api.get("/student/form1");
 
         if (res.data.form1) {
-          setFormData(res.data.form1); // ✅ auto-fill
+          setFormData(res.data.form1);
           setFormAlreadyFilled(true);
         }
-
+        
+        if (res.data.mentor) {
+          setFormData((prev) => ({
+            ...prev,
+            mentorId: res.data.mentor._id,
+            mentorName: res.data.mentor.name,
+          }));
+        }
         setIsTeamLead(res.data.isTeamLead); // ✅ role check
       } catch (err) {
         console.error("Fetch form error:", err);
@@ -400,13 +408,10 @@ const Form1Student = () => {
 
         {/* Mentor / Lab Coordinator */}
         <input
-          name="mentorName"
-          value={formData.mentorName}
-          onChange={handleChange}
-          placeholder="Mentor Name"
-          disabled={!isTeamLead}
-          className="form-input"
-        />
+  value={formData.mentorName}
+  readOnly
+  className="form-input bg-gray-100"
+/>
         <input
           name="labCoordinatorName"
           value={formData.labCoordinatorName}

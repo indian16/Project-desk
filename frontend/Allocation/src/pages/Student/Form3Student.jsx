@@ -6,38 +6,37 @@ const Form3Student = () => {
   const [weeks, setWeeks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [savingWeek, setSavingWeek] = useState(null);
+  const [projectId, setProjectId] = useState(null);
 
   useEffect(() => {
-    const fetchForm3 = async () => {
-      try {
-        const res = await getForm3();
+  const fetchForm3 = async () => {
+    try {
+      const res = await getForm3();
 
-        // Handle different possible backend response structures
-        const form3Data = res?.form3 || res?.data?.form3 || res?.data || res;
+      const form3Data = res.form3;
+      const projectIdFromApi = res.projectId;
 
-        if (!form3Data || !form3Data.weeks) {
-          setError("Form-3 not configured yet");
-          return;
-        }
-
-        setForm3(form3Data);
-        setWeeks(form3Data.weeks || []);
-
-        // Save projectId if available
-        if (form3Data.projectId) {
-          localStorage.setItem("projectId", form3Data.projectId);
-        }
-      } catch (err) {
-        console.error("FORM3 ERROR:", err);
-        setError("Failed to load Form-3");
-      } finally {
-        setLoading(false);
+      if (!form3Data || !form3Data.weeks) {
+        setError("Form-3 not configured yet");
+        return;
       }
-    };
 
-    fetchForm3();
-  }, []);
+      setForm3(form3Data);
+      setWeeks(form3Data.weeks || []);
+
+      if (projectIdFromApi) {
+        setProjectId(projectIdFromApi);
+        localStorage.setItem("projectId", projectIdFromApi);
+      }
+    } catch (err) {
+      setError("Failed to load Form-3");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  fetchForm3();
+}, []);
 
   const handleChange = (index, field, value) => {
     const updatedWeeks = [...weeks];
@@ -47,29 +46,17 @@ const Form3Student = () => {
 
   const handleSubmitWeek = async (week) => {
     try {
-      const projectId = localStorage.getItem("projectId"); // ✅ Always get latest
+      await submitForm3Week(projectId, {
+        weekNumber: week.weekNumber,
+        functionality: week.functionality,
+        progress: week.progress,
+        taskDetails: week.taskDetails,
+      });
 
-      if (!projectId) {
-        alert("Project not assigned yet");
-        return;
-      }
-
-      setSavingWeek(week.weekNumber);
-
-      await submitForm3Week(
-        projectId,
-        week.weekNumber,
-        week.functionality,
-        week.progress,
-        week.taskDetails,
-      );
-
-      alert(`Week ${week.weekNumber} saved successfully`);
+      alert(`Week ${week.weekNumber} submitted`);
     } catch (err) {
       console.error("SUBMIT ERROR:", err);
-      alert("Failed to save week");
-    } finally {
-      setSavingWeek(null);
+      alert("Failed to submit week");
     }
   };
 
@@ -156,14 +143,9 @@ const Form3Student = () => {
               <div className="mt-6 flex justify-end">
                 <button
                   onClick={() => handleSubmitWeek(week)}
-                  disabled={savingWeek === week.weekNumber}
-                  className={`px-6 py-2 rounded-full font-semibold text-white transition duration-300 ${
-                    savingWeek === week.weekNumber
-                      ? "bg-gray-400"
-                      : "bg-gradient-to-r from-indigo-600 to-blue-500 hover:scale-105"
-                  }`}
+                  className="bg-indigo-600 text-white px-4 py-2 rounded"
                 >
-                  {savingWeek === week.weekNumber ? "Saving..." : "Save Week"}
+                  Submit Week
                 </button>
               </div>
             </div>

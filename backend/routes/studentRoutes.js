@@ -41,12 +41,16 @@ router.get("/documents/download/:id", downloadDocument);
 router.get("/project/checklist", getChecklist);
 router.post("/project/upload-checklist",upload.single("file"), uploadChecklistFile);
 
-// ✅ New Form1 and Form2 routes
+// Form1 routes
 router.get("/form1",  getForm1ByProject);
 router.post("/form1/save",  saveForm1);
+
+// Form2 routes
 router.get("/form2/project",  getForm2ByProject);
 router.post("/form2/save",  saveForm2);
+
+// Form3 routes
 router.get("/form3", getForm3);
-router.post("/form3/week", submitForm3Week);
+router.post("/form3/:projectId/week", submitForm3Week);
 
 module.exports = router;

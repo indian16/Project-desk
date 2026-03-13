@@ -671,7 +671,7 @@ const saveForm1 = async (req, res) => {
       return res.status(401).json({ success: false, message: "Unauthorized" });
     }
 
-    const { formData = {}, submitType } = req.body; // TEAM | MENTOR | HEAD | undefined (draft)
+    const { formData = {}, submitType } = req.body;
 
     // ---------------------------
     // 1️⃣ Find the project
@@ -679,12 +679,15 @@ const saveForm1 = async (req, res) => {
     let project =
       (await AssignedProject.findOne({
         $or: [{ student: studentId }, { teamMembers: studentId }],
-      }).populate("teamMembers", "name email")) ||
+      })
+        .populate("teamMembers", "name email")
+        .populate("approveMentor", "name")) ||
       (await ProjectIdea.findOne({
         $or: [{ "teamLead.id": studentId }, { teamMembers: studentId }],
       })
         .populate("teamMembers", "name email")
-        .populate("teamLead.id", "name email"));
+        .populate("teamLead.id", "name email")
+        .populate("confirmedMentor", "name"));
 
     if (!project) {
       return res
@@ -695,15 +698,29 @@ const saveForm1 = async (req, res) => {
     const projectModel = project.teamLead ? "ProjectIdea" : "AssignedProject";
 
     // ---------------------------
+    // ⭐ Get mentor automatically
+    // ---------------------------
+    let mentorId = null;
+    let mentorName = "";
+
+    if (projectModel === "AssignedProject") {
+      mentorId = project.approveMentor?._id || project.approveMentor;
+      mentorName = project.approveMentor?.name || "";
+    }
+
+    if (projectModel === "ProjectIdea") {
+      mentorId = project.confirmedMentor?._id || project.confirmedMentor;
+      mentorName = project.confirmedMentor?.name || "";
+    }
+
+    // ---------------------------
     // 2️⃣ Only Team Lead can submit
     // ---------------------------
     let projectLeadId;
 
     if (project.teamLead) {
-      // ProjectIdea
       projectLeadId = project.teamLead.id?._id || project.teamLead.id;
     } else if (project.student) {
-      // AssignedProject
       projectLeadId = project.student;
     }
 
@@ -717,7 +734,7 @@ const saveForm1 = async (req, res) => {
     }
 
     // ---------------------------
-    // 3️⃣ Get existing Form1 (if any)
+    // 3️⃣ Get existing Form1
     // ---------------------------
     let form1 = await Form1.findOne({ projectId: project._id });
 
@@ -729,16 +746,17 @@ const saveForm1 = async (req, res) => {
     if (submitType === "MENTOR") nextStage = "MENTOR_SUBMITTED";
     if (submitType === "HEAD") nextStage = "HEAD_SUBMITTED";
 
-    // Validate stage order
     const stageOrder = [
       "DRAFT",
       "TEAM_SUBMITTED",
       "MENTOR_SUBMITTED",
       "HEAD_SUBMITTED",
     ];
+
     if (form1) {
       const currentIndex = stageOrder.indexOf(form1.submissionStage);
       const nextIndex = stageOrder.indexOf(nextStage);
+
       if (nextIndex < currentIndex) {
         return res.status(400).json({
           success: false,
@@ -753,6 +771,7 @@ const saveForm1 = async (req, res) => {
     const teamMembersFromFrontend = Array.isArray(formData.teamMembers)
       ? formData.teamMembers
       : [];
+
     const teamMembers = teamMembersFromFrontend.map((m) => ({
       name: m.name || "",
       mobile: m.mobile || "",
@@ -779,7 +798,9 @@ const saveForm1 = async (req, res) => {
       proposedModules: formData.proposedModules || [],
       teamMembers,
 
-      mentorName: formData.mentorName || "",
+      mentorId,
+      mentorName,
+
       labCoordinatorName: formData.labCoordinatorName || "",
 
       submissionStage: nextStage,
@@ -792,6 +813,7 @@ const saveForm1 = async (req, res) => {
       },
 
       lastEditedBy: studentId,
+
       editHistory: [
         ...(form1?.editHistory || []),
         { editedBy: studentId, editedAt: new Date() },
@@ -825,7 +847,6 @@ const saveForm1 = async (req, res) => {
   }
 };
 
-// GET FORM 1 (TEAM / MENTOR / HEAD VIEW)
 const getForm1ByProject = async (req, res) => {
   try {
     const studentId = req.user?.id || req.user?._id;
@@ -837,10 +858,10 @@ const getForm1ByProject = async (req, res) => {
     const project =
       (await AssignedProject.findOne({
         $or: [{ student: studentId }, { teamMembers: studentId }],
-      })) ||
+      }).populate("approvedMentor", "name")) ||
       (await ProjectIdea.findOne({
         $or: [{ "teamLead.id": studentId }, { teamMembers: studentId }],
-      }));
+      }).populate("confirmedMentor", "name"));
 
     if (!project) {
       return res
@@ -857,10 +878,14 @@ const getForm1ByProject = async (req, res) => {
     // 📄 Fetch form
     const form1 = await Form1.findOne({ projectId: project._id });
 
+    // 🎯 Get mentor depending on model
+    const mentor = project.approvedMentor || project.confirmMentor || null;
+
     return res.status(200).json({
       success: true,
       isTeamLead,
       form1: form1 || null,
+      mentor,
     });
   } catch (err) {
     console.error("getMyForm1 error:", err);
@@ -1000,19 +1025,36 @@ const getForm2ByProject = async (req, res) => {
 
 const getForm3 = async (req, res) => {
   try {
-    // get student from token
-    const student = await Student.findById(req.user.id);
+    const studentId = req.user.id;
 
+    const student = await Student.findById(studentId);
     if (!student) return res.status(404).json({ message: "Student not found" });
 
-    const form3 = await Form3.findOne({
-      academicYear: student.academicYear,
+    // Get Form3 template
+    const form3 = await Form3.findOne({ academicYear: student.academicYear });
+    if (!form3) return res.status(404).json({ message: "Form3 not found for this year" });
+
+    // Find student's project
+    const project =
+      (await ProjectIdea.findOne({ $or: [{ "teamLead.id": studentId }, { teamMembers: studentId }] })) ||
+      (await AssignedProject.findOne({ $or: [{ student: studentId }, { teamMembers: studentId }] }));
+    if (!project) return res.status(404).json({ message: "No project assigned yet" });
+
+    // Get student's saved entries
+    const studentForm3 = await StudentForm3.findOne({ studentId, projectId: project._id });
+
+    // Merge template weeks with saved weeks
+    const mergedWeeks = form3.weeks.map((week) => {
+      const savedWeek = studentForm3?.weeks.find(w => w.weekNumber === week.weekNumber);
+      return savedWeek ? { ...week.toObject(), ...savedWeek.toObject() } : week.toObject();
     });
 
-    if (!form3)
-      return res.status(404).json({ message: "Form3 not found for this year" });
+    res.status(200).json({
+      success: true,
+      form3: { ...form3.toObject(), weeks: mergedWeeks },
+      projectId: project._id,
+    });
 
-    res.status(200).json(form3);
   } catch (err) {
     console.error("Error fetching Form3:", err);
     res.status(500).json({ message: "Server error" });
@@ -1021,50 +1063,58 @@ const getForm3 = async (req, res) => {
 
 const submitForm3Week = async (req, res) => {
   try {
+    const { projectId } = req.params;
+    const { weekNumber, functionality, progress, taskDetails } = req.body;
+
     const studentId = req.user.id;
-    const { projectId, weekNumber, functionality, progress, taskDetails } =
-      req.body;
 
-    // 🔎 Validate project
-    const project =
-      (await ProjectIdea.findOne({
-        $or: [{ "teamLead.id": studentId }, { teamMembers: studentId }],
-      })) ||
-      (await AssignedProject.findOne({
-        $or: [{ student: studentId }, { teamMembers: studentId }],
-      }));
+    let form3 = await StudentForm3.findOne({ studentId, projectId });
 
-    if (!project) {
-      return res.status(404).json({
-        success: false,
-        message: "No project found",
+    if (!form3) {
+      form3 = new StudentForm3({
+        studentId,
+        projectId,
+        weeks: [],
       });
     }
 
-    if (project._id.toString() !== projectId) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid project ID",
-      });
-    }
-
-    // 📝 Save in StudentForm3 (NOT Form3)
-    const updated = await StudentForm3.findOneAndUpdate(
-      { studentId, projectId, weekNumber },
-      { functionality, progress, taskDetails },
-      { new: true, upsert: true },
+    const existingWeek = form3.weeks.find(
+      (w) => w.weekNumber === Number(weekNumber)
     );
 
-    res.status(200).json({
+    if (existingWeek && existingWeek.marks) {
+      return res.status(400).json({
+        success: false,
+        message: "Week already evaluated by mentor and cannot be edited",
+      });
+    }
+
+    if (existingWeek) {
+      existingWeek.functionality = functionality;
+      existingWeek.progress = progress;
+      existingWeek.taskDetails = taskDetails;
+    } else {
+      form3.weeks.push({
+        weekNumber,
+        functionality,
+        progress,
+        taskDetails,
+      });
+    }
+
+    await form3.save();
+
+    res.json({
       success: true,
-      message: `Week ${weekNumber} submitted successfully`,
-      data: updated,
+      form3,
     });
+
   } catch (error) {
-    console.error("Error submitting Form-3 week:", error);
+    console.error("FORM3 SUBMIT ERROR:", error);
+
     res.status(500).json({
       success: false,
-      message: "Failed to submit Form-3 week",
+      message: "Server error",
     });
   }
 };
