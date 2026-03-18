@@ -20,7 +20,7 @@ import ScheduleInterview from "./ReviewProjects/ScheduleInterview";
 import InterviewStatus from "./ReviewProjects/InterviewStatus";
 import Projectsdata from "./Projectsdata";
 import Navbar from "../../components/Navbar";
-import Register from "../auth/Register";
+import Register from "../Auth/Register";
 import InterviewSection from "./InterviewSection";
 import {
   Filter,
