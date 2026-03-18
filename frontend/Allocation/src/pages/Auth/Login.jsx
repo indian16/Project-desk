@@ -1,13 +1,13 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { login as loginService } from "../../services/authService"; // API call
+import { login as loginService } from "../../services/authService";
 import { useAuth } from "../../hooks/useAuth";
 
 const Login = () => {
   const [formData, setFormData] = useState({ email: "", password: "" });
   const [error, setError] = useState("");
   const navigate = useNavigate();
-  const { login } = useAuth(); // context login
+  const { login } = useAuth();
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -18,16 +18,14 @@ const Login = () => {
     setError("");
 
     try {
-      const data = await loginService(formData); // backend call
+      const data = await loginService(formData);
 
       if (!data?.token || !data?.user?.role) {
         throw new Error("Invalid server response");
       }
 
-      // Save user + token in context + localStorage
       login(data.user, data.token);
 
-      // Navigate based on role
       const role = data.user.role.toLowerCase();
       if (role === "student") {
         navigate("/student/StudentDashboard", { replace: true });
@@ -40,20 +38,38 @@ const Login = () => {
       }
     } catch (err) {
       console.error("Login error:", err.response?.data || err.message);
-      setError(err.response?.data?.message || "Invalid credentials or server error.");
+      setError(
+        err.response?.data?.message ||
+          "Invalid credentials or server error."
+      );
     }
   };
 
   return (
-    <div className="flex min-h-screen bg-gradient-to-br from-cyan-400 to-blue-600">
-      {/* Left - Login Form */}
-      <div className="w-1/2 flex items-center justify-center">
-        <div className="max-w-md w-full p-10 bg-white rounded-3xl shadow-2xl">
-          <h2 className="text-3xl font-bold text-center text-gray-800 mb-6">Login</h2>
+    <div className="flex flex-col lg:flex-row min-h-screen bg-gradient-to-br from-cyan-400 to-blue-600">
+      
+      {/* 🔥 MOBILE TITLE (only visible on small screens) */}
+      <div className="block lg:hidden text-center mt-10 px-4">
+        <h1 className="text-white text-4xl sm:text-5xl font-extrabold drop-shadow-lg animate-fadeInRight">
+          PROJECT DESK
+        </h1>
+      </div>
+
+      {/* LEFT - FORM */}
+      <div className="w-full lg:w-1/2 flex items-center justify-center px-4 py-10">
+        <div className="w-full max-w-md p-6 sm:p-8 md:p-10 bg-white rounded-3xl shadow-2xl">
+          
+          <h2 className="text-2xl sm:text-3xl font-bold text-center text-gray-800 mb-6">
+            Login
+          </h2>
+
           {error && (
-            <p className="text-red-600 text-center mb-4 font-medium animate-shake">{error}</p>
+            <p className="text-red-600 text-center mb-4 font-medium animate-shake text-sm sm:text-base">
+              {error}
+            </p>
           )}
-          <form onSubmit={handleSubmit} className="space-y-6">
+
+          <form onSubmit={handleSubmit} className="space-y-5">
             <input
               type="email"
               name="email"
@@ -61,8 +77,9 @@ const Login = () => {
               value={formData.email}
               onChange={handleChange}
               required
-              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-4 focus:ring-cyan-400 transition shadow-sm"
+              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-4 focus:ring-cyan-400 transition shadow-sm text-sm sm:text-base"
             />
+
             <input
               type="password"
               name="password"
@@ -70,11 +87,12 @@ const Login = () => {
               value={formData.password}
               onChange={handleChange}
               required
-              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-4 focus:ring-cyan-400 transition shadow-sm"
+              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-4 focus:ring-cyan-400 transition shadow-sm text-sm sm:text-base"
             />
+
             <button
               type="submit"
-              className="w-full bg-gradient-to-r from-blue-500 to-cyan-500 text-white py-3 rounded-xl hover:scale-105 hover:shadow-xl transition duration-300 font-semibold"
+              className="w-full bg-gradient-to-r from-blue-500 to-cyan-500 text-white py-3 rounded-xl hover:scale-105 hover:shadow-xl transition duration-300 font-semibold text-sm sm:text-base"
             >
               Login
             </button>
@@ -82,24 +100,25 @@ const Login = () => {
         </div>
       </div>
 
-      {/* Right Side */}
-      <div className="w-1/2 flex items-center justify-center">
-        <h1 className="text-white text-8xl font-extrabold drop-shadow-lg animate-fadeInRight">
+      {/* RIGHT SIDE (only desktop) */}
+      <div className="hidden lg:flex w-1/2 items-center justify-center px-4 py-10">
+        <h1 className="text-white text-7xl xl:text-8xl font-extrabold drop-shadow-lg animate-fadeInRight text-center">
           PROJECT DESK
         </h1>
       </div>
 
-      {/* Animations */}
+      {/* ANIMATIONS */}
       <style>{`
         @keyframes fadeInRight {
           0% { transform: translateX(100px); opacity: 0; }
           100% { transform: translateX(0); opacity: 1; }
         }
         .animate-fadeInRight { animation: fadeInRight 1s ease-out forwards; }
+
         @keyframes shake {
           0%,100% { transform: translateX(0); }
-          20%,60% { transform: translateX(-10px); }
-          40%,80% { transform: translateX(10px); }
+          20%,60% { transform: translateX(-8px); }
+          40%,80% { transform: translateX(8px); }
         }
         .animate-shake { animation: shake 0.5s ease; }
       `}</style>

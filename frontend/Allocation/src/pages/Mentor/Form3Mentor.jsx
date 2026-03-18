@@ -1,3 +1,4 @@
+//Form3Mentor.jsx
 import React, { useEffect, useState } from "react";
 import {
   getProjectForm3,
@@ -5,28 +6,33 @@ import {
 } from "../../services/mentorService";
 
 const Form3Mentor = ({ projectId, onClose }) => {
-  const [students, setStudents] = useState([]);
+  const [weeks, setWeeks] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [expandedStudent, setExpandedStudent] = useState(null);
+  const [expandedWeek, setExpandedWeek] = useState(null);
   const [savingWeek, setSavingWeek] = useState(null);
+  const [savedWeeks, setSavedWeeks] = useState([]); // Tracks evaluated weeks
 
-  // Fetch Form3 data
+  // Compute summary
+  const evaluatedWeeks = weeks.filter((w) => savedWeeks.includes(w.weekNumber));
+  const totalWeeks = evaluatedWeeks.length;
+  const totalMarks = evaluatedWeeks.reduce(
+    (sum, w) => sum + Number(w.marks || 0),
+    0,
+  );
+  const maxMarks = totalWeeks * 10;
+  const average = totalWeeks ? (totalMarks / totalWeeks).toFixed(2) : 0;
+
   useEffect(() => {
-    const fetchData = async () => {
+    const fetchForm3 = async () => {
       try {
         const res = await getProjectForm3(projectId);
         if (res.success) {
-          setStudents(
-            res.students.map((s) => ({
-              ...s,
-              weeks: s.weeks.map((w) => ({
-                ...w,
-                marks: w.marks ?? "",
-                mentorRemark: w.mentorRemark ?? "",
-                locked: w.marks !== undefined && w.marks !== null,
-              })),
-            })),
-          );
+          setWeeks(res.form3.weeks || []);
+          // prefill savedWeeks for already evaluated weeks
+          const alreadySaved = (res.form3.weeks || [])
+            .filter((w) => w.marks !== undefined && w.marks !== null)
+            .map((w) => w.weekNumber);
+          setSavedWeeks(alreadySaved);
         }
       } catch (err) {
         console.error(err);
@@ -34,125 +40,102 @@ const Form3Mentor = ({ projectId, onClose }) => {
         setLoading(false);
       }
     };
-    fetchData();
+
+    fetchForm3();
   }, [projectId]);
 
-  const handleEvaluate = async (studentId, week) => {
-    if (week.marks === "" || week.marks < 1 || week.marks > 10) return;
+  const handleChange = (index, field, value) => {
+    const updated = [...weeks];
+    updated[index][field] = value;
+    setWeeks(updated);
+  };
 
+  const handleEvaluate = async (week) => {
     try {
-      setSavingWeek(`${studentId}-${week.weekNumber}`);
+      setSavingWeek(week.weekNumber);
 
       await evaluateForm3Week({
         projectId,
-        studentId,
         weekNumber: week.weekNumber,
         marks: week.marks,
         mentorRemark: week.mentorRemark,
       });
 
-      setStudents((prev) =>
-        prev.map((s) =>
-          s.studentId === studentId
-            ? {
-                ...s,
-                weeks: s.weeks.map((w) =>
-                  w.weekNumber === week.weekNumber ? { ...w, locked: true } : w,
-                ),
-              }
-            : s,
-        ),
-      );
+      // Lock week after successful save
+      setSavedWeeks([...savedWeeks, week.weekNumber]);
 
       alert(`Week ${week.weekNumber} evaluated successfully!`);
     } catch (err) {
       console.error(err);
-      alert(err.message || "Failed to submit evaluation");
+      alert("Failed to submit evaluation");
     } finally {
       setSavingWeek(null);
     }
   };
 
   if (loading) return <p className="p-6">Loading Form 3...</p>;
-  if (!students.length)
-    return (
-      <p className="p-6 text-gray-500">
-        No students assigned or Form 3 not submitted yet.
-      </p>
-    );
 
   return (
-    <div className="space-y-4">
-      {students.map((student) => (
-        <div
-          key={student.studentId}
-          className="border rounded-xl overflow-hidden shadow-sm"
+    <div className="w-full max-w-6xl mx-auto bg-white rounded-2xl shadow p-6">
+      {/* HEADER */}
+      <div className="flex justify-between items-center border-b pb-3 mb-6">
+        <h2 className="text-xl font-bold text-gray-800">
+          Weekly Project Evaluation
+        </h2>
+        <button
+          onClick={onClose}
+          className="text-gray-500 hover:text-red-500 text-lg"
         >
-          {/* STUDENT HEADER */}
-          <div
-            onClick={() =>
-              setExpandedStudent(
-                expandedStudent === student.studentId
-                  ? null
-                  : student.studentId,
-              )
-            }
-            className="flex justify-between items-center bg-gray-50 px-5 py-4 cursor-pointer"
-          >
-            <h3 className="font-semibold text-indigo-600">{student.name}</h3>
-            <span className="text-gray-500">
-              {expandedStudent === student.studentId ? "▲" : "▼"}
-            </span>
-          </div>
+          ✕
+        </button>
+      </div>
 
-          {/* WEEK DETAILS */}
-          {expandedStudent === student.studentId && (
-            <div className="p-5 space-y-5">
-              {/* STUDENT SUMMARY */}
-              <div className="mb-4 p-3 bg-gray-100 rounded">
-                <p className="font-semibold text-gray-700">
-                  Total Weeks: {student.weeks.length}
-                </p>
-                <p className="font-semibold text-gray-700">
-                  Total Marks:{" "}
-                  {student.weeks.reduce(
-                    (acc, w) =>
-                      acc + (typeof w.marks === "number" ? w.marks : 0),
-                    0,
-                  )}
-                </p>
-                <p className="font-semibold text-gray-700">
-                  Average Marks:{" "}
-                  {(
-                    student.weeks.reduce(
-                      (acc, w) =>
-                        acc + (typeof w.marks === "number" ? w.marks : 0),
-                      0,
-                    ) / student.weeks.length || 0
-                  ).toFixed(2)}
+      {/* WEEKS */}
+      <div className="space-y-4">
+        {weeks.map((week, index) => (
+          <div
+            key={week.weekNumber}
+            className="border rounded-xl overflow-hidden"
+          >
+            {/* WEEK HEADER */}
+            <div
+              onClick={() =>
+                setExpandedWeek(
+                  expandedWeek === week.weekNumber ? null : week.weekNumber,
+                )
+              }
+              className="flex justify-between items-center bg-gray-50 px-5 py-4 cursor-pointer"
+            >
+              <div>
+                <h3 className="font-semibold text-indigo-600">
+                  Week {week.weekNumber}
+                </h3>
+                <p className="text-xs text-gray-500">
+                  Progress: {week.progress}%
                 </p>
               </div>
 
-              {/* WEEK DETAILS (keep your existing code here exactly as before) */}
-              {student.weeks.map((week) => (
-                <div key={week.weekNumber} className="border-t pt-3 space-y-3">
-                  {/* WEEK HEADER */}
-                  <div className="flex justify-between items-center">
-                    <p className="font-medium">
-                      Week {week.weekNumber} - {week.progress}% complete
-                    </p>
-                    {week.locked ? (
-                      <span className="text-green-700 text-xs bg-green-100 px-2 py-1 rounded">
-                        {week.marks}/10
-                      </span>
-                    ) : (
-                      <span className="text-yellow-700 text-xs bg-yellow-100 px-2 py-1 rounded">
-                        Pending
-                      </span>
-                    )}
-                  </div>
+              <div className="flex items-center gap-4">
+                {savedWeeks.includes(week.weekNumber) ? (
+                  <span className="text-xs bg-green-100 text-green-700 px-3 py-1 rounded">
+                    {week.marks}/10
+                  </span>
+                ) : (
+                  <span className="text-xs bg-yellow-100 text-yellow-700 px-3 py-1 rounded">
+                    Pending
+                  </span>
+                )}
+                <span className="text-gray-400 text-sm">
+                  {expandedWeek === week.weekNumber ? "▲" : "▼"}
+                </span>
+              </div>
+            </div>
 
-                  {/* FUNCTIONALITY */}
+            {/* WEEK DETAILS */}
+            {expandedWeek === week.weekNumber && (
+              <div className="p-5 space-y-5">
+                {/* STUDENT DETAILS */}
+                <div className="grid md:grid-cols-2 gap-5 text-sm">
                   <div>
                     <p className="text-xs text-gray-500 font-semibold">
                       Functionality
@@ -160,15 +143,6 @@ const Form3Mentor = ({ projectId, onClose }) => {
                     <p className="font-medium">{week.functionality}</p>
                   </div>
 
-                  {/* TASK DETAILS */}
-                  <div>
-                    <p className="text-xs text-gray-500 font-semibold">
-                      Task Details
-                    </p>
-                    <p className="font-medium">{week.taskDetails}</p>
-                  </div>
-
-                  {/* PROGRESS BAR */}
                   <div>
                     <p className="text-xs text-gray-500 font-semibold">
                       Progress
@@ -181,92 +155,101 @@ const Form3Mentor = ({ projectId, onClose }) => {
                     </div>
                   </div>
 
-                  {/* EVALUATION */}
-                  <div className="flex flex-wrap gap-2 items-center mt-2">
-                    <input
-                      type="number"
-                      min="1"
-                      max="10"
-                      placeholder="Marks (1-10)"
-                      value={week.marks}
-                      disabled={week.locked}
-                      onChange={(e) => {
-                        let value =
-                          e.target.value === "" ? "" : Number(e.target.value);
-                        if (value !== "" && (value < 1 || value > 10)) return;
-                        setStudents((prev) =>
-                          prev.map((s) =>
-                            s.studentId === student.studentId
-                              ? {
-                                  ...s,
-                                  weeks: s.weeks.map((w) =>
-                                    w.weekNumber === week.weekNumber
-                                      ? { ...w, marks: value }
-                                      : w,
-                                  ),
-                                }
-                              : s,
-                          ),
-                        );
-                      }}
-                      className="border rounded px-2 py-1 w-20"
-                    />
-
-                    <input
-                      type="text"
-                      placeholder="Mentor Remark"
-                      value={week.mentorRemark}
-                      disabled={week.locked}
-                      onChange={(e) => {
-                        const value = e.target.value;
-                        setStudents((prev) =>
-                          prev.map((s) =>
-                            s.studentId === student.studentId
-                              ? {
-                                  ...s,
-                                  weeks: s.weeks.map((w) =>
-                                    w.weekNumber === week.weekNumber
-                                      ? { ...w, mentorRemark: value }
-                                      : w,
-                                  ),
-                                }
-                              : s,
-                          ),
-                        );
-                      }}
-                      className="border rounded px-2 py-1 flex-1"
-                    />
-
-                    <button
-                      disabled={
-                        week.locked ||
-                        savingWeek ===
-                          `${student.studentId}-${week.weekNumber}` ||
-                        week.marks === "" ||
-                        week.marks < 1 ||
-                        week.marks > 10
-                      }
-                      onClick={() => handleEvaluate(student.studentId, week)}
-                      className={`px-3 py-1 rounded text-white ${
-                        week.locked ||
-                        week.marks === "" ||
-                        week.marks < 1 ||
-                        week.marks > 10
-                          ? "bg-gray-400 cursor-not-allowed"
-                          : "bg-indigo-600 hover:bg-indigo-700"
-                      }`}
-                    >
-                      {savingWeek === `${student.studentId}-${week.weekNumber}`
-                        ? "Saving..."
-                        : "Submit"}
-                    </button>
+                  <div className="md:col-span-2">
+                    <p className="text-xs text-gray-500 font-semibold">
+                      Task Details
+                    </p>
+                    <p className="font-medium">{week.taskDetails}</p>
                   </div>
                 </div>
-              ))}
-            </div>
-          )}
+
+                {/* EVALUATION */}
+                <div className="border-t pt-4 grid md:grid-cols-3 gap-4">
+                  <input
+                    type="number"
+                    min="1"
+                    max="10"
+                    placeholder="Marks (1-10)"
+                    disabled={
+                      savingWeek === week.weekNumber ||
+                      savedWeeks.includes(week.weekNumber)
+                    }
+                    value={week.marks || ""}
+                    className="border rounded-lg px-3 py-2 text-sm disabled:bg-gray-100"
+                    onChange={(e) => {
+                      const value = Number(e.target.value);
+                      if (value >= 1 && value <= 10) {
+                        handleChange(index, "marks", value);
+                      } else if (e.target.value === "") {
+                        handleChange(index, "marks", "");
+                      }
+                    }}
+                  />
+
+                  <textarea
+                    rows={2}
+                    placeholder="Mentor remark"
+                    disabled={
+                      savingWeek === week.weekNumber ||
+                      savedWeeks.includes(week.weekNumber)
+                    }
+                    value={week.mentorRemark || ""}
+                    className="border rounded-lg px-3 py-2 text-sm resize-none disabled:bg-gray-100"
+                    onChange={(e) =>
+                      handleChange(index, "mentorRemark", e.target.value)
+                    }
+                  />
+
+                  <button
+                    onClick={() => handleEvaluate(week)}
+                    disabled={
+                      savingWeek === week.weekNumber ||
+                      savedWeeks.includes(week.weekNumber)
+                    }
+                    className="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-indigo-700 disabled:bg-gray-400"
+                  >
+                    {savingWeek === week.weekNumber
+                      ? "Saving..."
+                      : "Submit Evaluation"}
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+
+      {/* SUMMARY */}
+      <div className="mt-8 border-t pt-6">
+        <div className="bg-indigo-50 rounded-xl p-6 flex flex-wrap justify-between text-center gap-6">
+          <div>
+            <p className="text-xs text-gray-500">Total Weeks</p>
+            <p className="text-2xl font-bold text-indigo-700">{totalWeeks}</p>
+          </div>
+
+          <div>
+            <p className="text-xs text-gray-500">Total Marks</p>
+            <p className="text-2xl font-bold text-indigo-700">
+              {totalMarks} / {maxMarks}
+            </p>
+          </div>
+
+          <div>
+            <p className="text-xs text-gray-500">Average</p>
+            <p
+              className={`text-2xl font-bold ${
+                average >= 8
+                  ? "text-green-600"
+                  : average >= 6
+                    ? "text-yellow-600"
+                    : "text-red-600"
+              }`}
+            >
+              {average}
+            </p>
+          </div>
         </div>
-      ))}
+      </div>
     </div>
   );
 };

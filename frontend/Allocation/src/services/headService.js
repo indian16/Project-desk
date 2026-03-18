@@ -286,6 +286,19 @@ export const getProjectDocuments = async (projectId) => {
   }
 };
 
+export const getHeadProjectForm = async (formType, projectId) => {
+  try {
+    const res = await api.get(
+      `head/forms/${formType}/${projectId}`
+    );
+
+    return res.data;
+
+  } catch (error) {
+    console.error("Error fetching project form:", error);
+    throw error;
+  }
+};
 
 export const getTotalProjects = async () => ({ count: 0 });
 export const getTotalForms = async () => ({ count: 0 });

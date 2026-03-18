@@ -31,12 +31,18 @@ export const getMentorProject = async () => {
 };
 
 // Approve or reject the project
-export const reviewAssignedProject = async (action) => {
+export const reviewAssignedProject = async (projectId, action, reason = "") => {
   try {
-    const res = await api.patch("/mentor/project/review", { action });
+    const res = await api.patch(
+      `/mentor/assigned-projects/${projectId}/review`,
+      {
+        action,
+        reason, // optional for approval, required for rejection
+      },
+    );
     return res.data;
   } catch (err) {
-    console.error("Error reviewing project:", err);
+    console.error("Error reviewing assigned project:", err);
     throw err.response?.data || err;
   }
 };
@@ -65,7 +71,7 @@ export const reviewIdeaProject = async (id, action, feedback) => {
 };
 
 // Get mentor approved projects (Idea + Bank)
-export const getMentorApprovedProjects = async () => {
+export const getMyApprovedProjects = async () => {
   const res = await api.get("/mentor/approved-projects");
   return res.data;
 };
@@ -81,7 +87,7 @@ export const getProjectDocuments = async (projectId) => {
   }
 };
 
-export const getForm1ByProject = async (projectId) => {
+export const getForm1ByProjectMentor = async (projectId) => {
   const res = await api.get(`/mentor/form1/${projectId}`);
   return res.data;
 };
@@ -90,8 +96,31 @@ export const approveForm1 = async (projectId) => {
   const res = await api.put(`/mentor/form1/approve/${projectId}`);
   return res.data;
 };
+
+// Get Assigned Project Form1
+export const getAssignedForm1 = async (projectId) => {
+  try {
+    const res = await api.get(`/mentor/assigned/form1/${projectId}`);
+    return res.data;
+  } catch (error) {
+    console.error("Error fetching assigned Form1:", error);
+    throw error;
+  }
+};
+
+// Approve Assigned Project Form1
+export const approveAssignedForm1 = async (projectId) => {
+  try {
+    const res = await api.put(`/mentor/assigned/form1/approve/${projectId}`);
+    return res.data;
+  } catch (error) {
+    console.error("Error approving assigned Form1:", error);
+    throw error;
+  }
+};
+
 // Fetch all Form2 submissions for a specific project
-export const getForm2ByProject = async (projectId) => {
+export const getForm2ByProjectMentor = async (projectId) => {
   const res = await api.get(`/mentor/form2/${projectId}`);
   return res.data;
 };
@@ -122,11 +151,11 @@ export const evaluateForm3Week = async ({
     // Call backend route
     const res = await api.post(
       `/mentor/project/${projectId}/form3/evaluate`,
-      { studentId, weekNumber, marks, mentorRemark } // studentId in body
+      { studentId, weekNumber, marks, mentorRemark }, // studentId in body
     );
     return res.data;
   } catch (err) {
     console.error("Error evaluating Form3 week:", err);
     throw err.response?.data || err;
   }
-};  
+};

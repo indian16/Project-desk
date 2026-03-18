@@ -1,45 +1,24 @@
 import React, { useEffect, useState } from "react";
-import {
-  getForm2ByProjectMentor,
-  approveForm2,
-} from "../../services/mentorService";
+import { getHeadProjectForm } from "../../services/headService";
 
-const Form2Mentor = ({ projectId }) => {
+const Form2Head = ({ projectId }) => {
   const [members, setMembers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [expanded, setExpanded] = useState(null);
-  const [approving, setApproving] = useState(null);
 
   const fetchForm2 = async () => {
     setLoading(true);
-    try {
-      const res = await getForm2ByProjectMentor(projectId);
 
-      if (res.success && res.form2) {
-        setMembers(res.form2.members || []);
+    try {
+      const res = await getHeadProjectForm("form2", projectId);
+
+      if (res.success && res.data) {
+        setMembers(res.data.members || []);
       }
     } catch (err) {
-      console.error(err);
+      console.error("Error loading Form2", err);
     } finally {
       setLoading(false);
-    }
-  };
-
-  const handleApprove = async (studentId) => {
-    try {
-      setApproving(studentId);
-
-      const res = await approveForm2(projectId, studentId);
-
-      if (res.success) {
-        alert("Form2 approved successfully");
-        fetchForm2();
-      }
-    } catch (err) {
-      console.error(err);
-      alert("Failed to approve Form2");
-    } finally {
-      setApproving(null);
     }
   };
 
@@ -74,7 +53,7 @@ const Form2Mentor = ({ projectId }) => {
           key={member.studentId?._id}
           className="border rounded-xl shadow-sm bg-white"
         >
-          {/* Student Header */}
+          {/* STUDENT HEADER */}
           <div
             onClick={() => toggleStudent(index)}
             className="cursor-pointer flex justify-between items-center p-4 bg-indigo-50 rounded-t-xl"
@@ -88,9 +67,14 @@ const Form2Mentor = ({ projectId }) => {
             </div>
 
             <div className="flex items-center gap-3">
-              {member.approvedByMentor && (
+              {/* STATUS */}
+              {member.approvedByMentor ? (
                 <span className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-sm">
                   Approved ✔
+                </span>
+              ) : (
+                <span className="bg-yellow-100 text-yellow-700 px-3 py-1 rounded-full text-sm">
+                  Pending
                 </span>
               )}
 
@@ -98,21 +82,20 @@ const Form2Mentor = ({ projectId }) => {
             </div>
           </div>
 
-          {/* Expanded Content */}
+          {/* EXPANDED MODULES */}
           {expanded === index && (
             <div className="p-5 space-y-4">
-              {/* Modules */}
-              {member.modules.map((module, mIndex) => (
+              {member.modules?.map((module, mIndex) => (
                 <div key={mIndex} className="border rounded-lg p-4 bg-gray-50">
                   <div className="grid md:grid-cols-2 gap-4 text-sm">
-                    <p className="break-words">
+                    <p>
                       <span className="font-semibold text-gray-700">
                         Module:
                       </span>{" "}
                       {module.moduleName}
                     </p>
 
-                    <p className="break-words">
+                    <p>
                       <span className="font-semibold text-gray-700">
                         Functionality:
                       </span>{" "}
@@ -138,7 +121,7 @@ const Form2Mentor = ({ projectId }) => {
                     </p>
                   </div>
 
-                  <p className="mt-3 break-words">
+                  <p className="mt-3">
                     <span className="font-semibold text-gray-700">
                       Details:
                     </span>{" "}
@@ -147,28 +130,15 @@ const Form2Mentor = ({ projectId }) => {
                 </div>
               ))}
 
-              {/* Approval Section */}
-              <div className="pt-3 border-t">
-                {member.approvedByMentor ? (
-                  <div className="text-green-700 font-semibold">
-                    Approved by {member.mentorName}
-                    <br />
-                    <span className="text-sm text-gray-500">
-                      {new Date(member.approvedAt).toLocaleDateString()}
-                    </span>
+              {/* APPROVAL INFO */}
+              {member.approvedByMentor && (
+                <div className="pt-3 border-t text-green-700 font-semibold">
+                  Approved by {member.mentorName}
+                  <div className="text-sm text-gray-500">
+                    {new Date(member.approvedAt).toLocaleDateString()}
                   </div>
-                ) : (
-                  <button
-                    onClick={() => handleApprove(member.studentId._id)}
-                    disabled={approving === member.studentId._id}
-                    className="bg-green-600 hover:bg-green-700 text-white px-5 py-2 rounded-lg"
-                  >
-                    {approving === member.studentId._id
-                      ? "Approving..."
-                      : "Approve Form2"}
-                  </button>
-                )}
-              </div>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -177,4 +147,4 @@ const Form2Mentor = ({ projectId }) => {
   );
 };
 
-export default Form2Mentor;
+export default Form2Head;

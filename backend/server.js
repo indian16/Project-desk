@@ -4,6 +4,7 @@ require("dotenv").config();
 const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
+const path = require("path");
 
 // Database connection
 const connectDB = require("./config/db");
@@ -13,6 +14,12 @@ const app = express();
 // Middleware
 app.use(cors());
 app.use(express.json());
+
+// Serve static files from uploads directory
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
+// Handle favicon.ico
+app.get('/favicon.ico', (req, res) => res.status(204).end());
 
 // MongoDB Connection
 connectDB();

@@ -22,7 +22,9 @@ const ProjectBankForm = () => {
     title: "",
     description: "",
     technology: "",
-    selectedMentor: "",
+    selectedMentor1: "",
+  selectedMentor2: "",
+  selectedMentor3: "",
     teamMembers: [],
     academicYear: "",
     branch: "",
@@ -83,44 +85,76 @@ const ProjectBankForm = () => {
     e.preventDefault();
     setError("");
     setSuccess("");
-
+  
     try {
-      if (!formData.projectId) throw new Error("Please select a project.");
-
-      await submitProjectBankForm({
-        student: localStorage.getItem("studentId"),
+      if (!formData.projectId) {
+        setError("Please select a project");
+        return;
+      }
+  
+      if (
+        !formData.selectedMentor1 ||
+        !formData.selectedMentor2 ||
+        !formData.selectedMentor3
+      ) {
+        setError("Please select all three mentor preferences");
+        return;
+      }
+  
+      if (
+        formData.selectedMentor1 === formData.selectedMentor2 ||
+        formData.selectedMentor1 === formData.selectedMentor3 ||
+        formData.selectedMentor2 === formData.selectedMentor3
+      ) {
+        setError("Please select three different mentors");
+        return;
+      }
+  
+      const payload = {
         projectId: formData.projectId,
         title: formData.title,
         description: formData.description,
         technology: formData.technology,
-        selectedMentor: formData.selectedMentor,
+  
+        selectedMentor1: formData.selectedMentor1,
+        selectedMentor2: formData.selectedMentor2,
+        selectedMentor3: formData.selectedMentor3,
+  
         teamMembers: formData.teamMembers,
+  
         teamLead: {
           id: localStorage.getItem("studentId"),
           name: localStorage.getItem("studentName"),
           email: localStorage.getItem("studentEmail"),
         },
+  
         academicYear: formData.academicYear,
         branch: formData.branch,
         section: formData.section,
         group: formData.group,
-      });
-
+      };
+  
+      await submitProjectBankForm(payload);
+  
       setSuccess("Project submitted successfully!");
+  
       setFormData({
         projectId: "",
         title: "",
         description: "",
         technology: "",
-        selectedMentor: "",
+        selectedMentor1: "",
+        selectedMentor2: "",
+        selectedMentor3: "",
         teamMembers: [],
         academicYear: "",
         branch: "",
         section: "",
         group: "",
       });
+  
     } catch (err) {
-      setError(err.message || "Submission failed");
+      setError(err.response?.data?.message || "Submission failed");
     }
   };
 
@@ -193,21 +227,55 @@ const ProjectBankForm = () => {
               </div>
 
               {/* Mentor */}
-              <div>
-                <label className="form-label">Select Mentor</label>
-                <select
-                  name="selectedMentor"
-                  value={formData.selectedMentor}
-                  onChange={handleChange}
-                  className="form-input"
-                >
-                  <option value="">-- Select Mentor --</option>
-                  {mentors.map((m) => (
-                    <option key={m._id} value={m._id}>{m.name}</option>
-                  ))}
-                </select>
-              </div>
+            {/* Mentor Preferences */}
+<div className="grid grid-cols-1 md:grid-cols-3 gap-4">
 
+<div>
+  <label className="form-label">Mentor Preference 1</label>
+  <select
+    name="selectedMentor1"
+    value={formData.selectedMentor1}
+    onChange={handleChange}
+    className="form-input"
+  >
+    <option value="">-- Select Mentor --</option>
+    {mentors.map((m) => (
+      <option key={m._id} value={m._id}>{m.name}</option>
+    ))}
+  </select>
+</div>
+
+<div>
+  <label className="form-label">Mentor Preference 2</label>
+  <select
+    name="selectedMentor2"
+    value={formData.selectedMentor2}
+    onChange={handleChange}
+    className="form-input"
+  >
+    <option value="">-- Select Mentor --</option>
+    {mentors.map((m) => (
+      <option key={m._id} value={m._id}>{m.name}</option>
+    ))}
+  </select>
+</div>
+
+<div>
+  <label className="form-label">Mentor Preference 3</label>
+  <select
+    name="selectedMentor3"
+    value={formData.selectedMentor3}
+    onChange={handleChange}
+    className="form-input"
+  >
+    <option value="">-- Select Mentor --</option>
+    {mentors.map((m) => (
+      <option key={m._id} value={m._id}>{m.name}</option>
+    ))}
+  </select>
+</div>
+
+</div>
               {/* Team Members */}
               <div>
                 <label className="form-label">Team Members</label>

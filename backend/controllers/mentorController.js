@@ -34,31 +34,31 @@ const getMentorProject = async (req, res) => {
   try {
     const mentorId = req.user.id;
 
-    const project = await AssignedProject.findOne({
+    const projects = await AssignedProject.find({
       $or: [
-        { selectedMentor: mentorId },
+        { selectedMentor1: mentorId },
         { selectedMentor2: mentorId },
         { selectedMentor3: mentorId },
       ],
     })
-      .populate("projectId") // details from ProjectBank
-      .populate("student", "name email") // student details
-      .populate("teamMembers", "name email") // team members details
-      .populate("selectedMentor", "name email"); // mentor details
+      .populate("projectId") // ProjectBank details
+      .populate("student", "name email") // student
+      .populate("teamLead", "name email") // team lead
+      .populate("teamMembers", "name email"); // team
 
-    if (!project) {
+    if (!projects || projects.length === 0) {
       return res.status(404).json({
         success: false,
-        message: "No project assigned to you yet.",
+        message: "No projects assigned to you yet.",
       });
     }
 
     res.json({
       success: true,
-      project,
+      projects, // 🔥 now returning ARRAY
     });
   } catch (error) {
-    console.error("Error fetching mentor project:", error);
+    console.error("Error fetching mentor projects:", error);
     res.status(500).json({
       success: false,
       message: "Server error",
@@ -69,58 +69,92 @@ const getMentorProject = async (req, res) => {
 // ====================== REVIEW PROJECT (APPROVE/REJECT) ======================
 const reviewAssignedProject = async (req, res) => {
   try {
-    const mentorId = req.user.id;
-    const { action, reason } = req.body;
+    const mentorId = req.user._id; // logged-in mentor
+    const { action } = req.body; // no reason needed now
+    const { projectId } = req.params;
 
     if (!["approve", "reject"].includes(action)) {
-      return res
-        .status(400)
-        .json({ success: false, message: "Invalid action" });
+      return res.status(400).json({ success: false, message: "Invalid action" });
     }
 
-    if (action === "reject" && (!reason || reason.trim() === "")) {
-      return res
-        .status(400)
-        .json({ success: false, message: "Rejection reason is required" });
-    }
-
-    const project = await AssignedProject.findOne({
-      $or: [
-        { selectedMentor: mentorId },
-        { selectedMentor2: mentorId },
-        { selectedMentor3: mentorId },
-      ],
-    });
+    const project = await AssignedProject.findById(projectId);
 
     if (!project) {
-      return res.status(404).json({
-        success: false,
-        message: "No project assigned to you.",
-      });
+      return res.status(404).json({ success: false, message: "Project not found" });
     }
 
-    // ✅ VERY IMPORTANT FIX
-    if (project.status !== "pending") {
-      return res.status(400).json({
-        success: false,
-        message: "Project already approved by another mentor",
-      });
+    // check if mentor is one of the selected mentors
+    const selectedMentors = [
+      project.selectedMentor1,
+      project.selectedMentor2,
+      project.selectedMentor3,
+    ]
+      .filter(Boolean)
+      .map((m) => m.toString());
+
+    if (!selectedMentors.includes(mentorId.toString())) {
+      return res.status(403).json({ success: false, message: "You are not selected as mentor for this project" });
     }
 
-    project.status = action; // stays same as your DB
-    project.approvedMentor = action === "approve" ? mentorId : null;
-    project.rejectionReason = action === "reject" ? reason : null;
+    // If project already approved by someone else
+    if (project.approvedMentor && project.approvedMentor.toString() !== mentorId.toString()) {
+      return res.status(400).json({ success: false, message: "Project already approved by another mentor" });
+    }
+
+    // Check if mentor already reviewed
+    const alreadyReviewed = project.feedbacks.some(f => {
+      const mId = f.mentor?._id ? f.mentor._id.toString() : f.mentor.toString();
+      return mId === mentorId.toString();
+    });
+
+    if (alreadyReviewed) {
+      return res.status(400).json({ success: false, message: "You already reviewed this project" });
+    }
+
+    // Process action
+    if (action === "approve") {
+      project.status = "approve";
+      project.approvedMentor = mentorId;
+      project.feedbacks.push({
+        mentor: mentorId,
+        action: "approve",
+      });
+    } else if (action === "reject") {
+      project.rejectedMentors = project.rejectedMentors || [];
+      if (!project.rejectedMentors.some(m => m.toString() === mentorId.toString())) {
+        project.rejectedMentors.push(mentorId);
+      }
+
+      project.feedbacks.push({
+        mentor: mentorId,
+        action: "reject",
+      });
+
+      project.status = "pending"; // still pending until approved
+    }
 
     await project.save();
 
+    // Populate for frontend
+    const updatedProject = await AssignedProject.findById(projectId)
+      .populate("selectedMentor1 selectedMentor2 selectedMentor3", "name email")
+      .populate("approvedMentor", "name email")
+      .populate("feedbacks.mentor", "name email");
+
+    // Remove all rejectedMentors and reject feedbacks for everyone
+    const projectForMentor = updatedProject.toObject();
+
+    projectForMentor.rejectedMentors = []; // completely hide
+    projectForMentor.feedbacks = projectForMentor.feedbacks.filter(f => f.action === "approve"); // only show approvals
+
     res.json({
       success: true,
-      message: `Project ${action}d successfully`,
-      project,
+      message: `Project ${action === "approve" ? "approved" : "rejected"} successfully`,
+      project: projectForMentor,
     });
 
-  } catch (error) {
-    console.error("Error reviewing project:", error);
+  } catch (err) {
+    console.error("Error reviewing assigned project:", err);
     res.status(500).json({ success: false, message: "Server error" });
   }
 };
@@ -168,8 +202,8 @@ const reviewIdeaProject = async (req, res) => {
   try {
     const { id } = req.params;
     const { action, feedback } = req.body;
-    
-    const mentorId = req.user._id.toString();
+
+    const mentorId = req.user._id;
 
     if (!["approve", "reject"].includes(action)) {
       return res.status(400).json({
@@ -187,62 +221,74 @@ const reviewIdeaProject = async (req, res) => {
       });
     }
 
-
     const selectedMentors = [
       project.selectedMentor1,
       project.selectedMentor2,
       project.selectedMentor3,
     ]
       .filter(Boolean)
-      .map(id => id.toString());
-    
-    if (!selectedMentors.includes(mentorId)) {
+      .map((m) => m.toString());
+
+    if (!selectedMentors.includes(mentorId.toString())) {
       return res.status(403).json({
         success: false,
         message: "You are not selected as mentor for this project",
       });
     }
 
-    // ✅ If already approved by another mentor
-    if (project.confirmedMentor) {
+    // prevent action if project already approved by another mentor
+    if (
+      project.confirmedMentor &&
+      project.confirmedMentor.toString() !== mentorId.toString()
+    ) {
       return res.status(400).json({
         success: false,
         message: "Project already approved by another mentor",
       });
     }
 
-    // ✅ Save feedback
-    project.feedbacks.push({
-      mentor: mentorId,
-      feedback: feedback || "",
-    });
+    // prevent same mentor reviewing twice
+    const alreadyReviewed = project.feedbacks.some(
+      (f) => f.mentor.toString() === mentorId.toString()
+    );
 
-    // ✅ If approve → confirm mentor
-    if (action === "approve") {
-      project.status = "approved_by_mentor";
-      project.confirmedMentor = mentorId; // 🔥 Only one mentor stored
+    if (alreadyReviewed) {
+      return res.status(400).json({
+        success: false,
+        message: "You already reviewed this project",
+      });
     }
 
-    // ✅ If reject → just store feedback (no status change unless you want)
+    if (action === "approve") {
+      project.status = "approved_by_mentor";
+      project.confirmedMentor = mentorId;
+    }
+
     if (action === "reject") {
-      project.status = "interview_passed"; 
-      // keep status same so other mentors can still approve
+      project.status = "interview_passed";
+
+      project.rejectedMentors.push(mentorId);
+
+      project.feedbacks.push({
+        mentor: mentorId,
+        feedback: feedback || "",
+      });
     }
 
     await project.save();
 
     const updatedProject = await ProjectIdea.findById(id)
-     
       .populate("teamMembers", "name email")
       .populate("teamLead.id", "name email")
-      .populate("confirmedMentor", "name email");
+      .populate("confirmedMentor", "name email")
+      .populate("feedbacks.mentor", "name email")
+      .populate("rejectedMentors", "name email");
 
     res.json({
       success: true,
       message: `Project ${action}d successfully`,
       project: updatedProject,
     });
-
   } catch (err) {
     console.error("Error reviewing idea project:", err);
     res.status(500).json({
@@ -266,13 +312,15 @@ const getMyApprovedProjects = async (req, res) => {
 
     // Projects coming from AssignedProject
     const approvedProjects = await AssignedProject.find({
-      approveMentor: mentorId,
+      approvedMentor: mentorId,
       status: "approve",
     })
       .populate("student", "name rollNo")
       .populate("projectId", "title description technology")
-      .populate("teamMembers", "name rollNo");
-
+      .populate({
+        path: "teamMembers",
+        select: "name email rollNo academicYear branch section group"
+      })
     return res.status(200).json({
       success: true,
       ideaProjects,
@@ -342,7 +390,7 @@ const getProjectDocuments = async (req, res) => {
 };
 
 // form 1
-const getForm1ByProject = async (req, res) => {
+const getForm1ByProjectMentor = async (req, res) => {
   try {
     const { projectId } = req.params;
     const mentorId = req.user._id;
@@ -410,7 +458,79 @@ const approveForm1 = async (req, res) => {
   }
 };
 
-const getForm2ByProject = async (req, res) => {
+//Assigned Project forms
+//form1 
+const getAssignedForm1ByProject = async (req, res) => {
+  try {
+    const { projectId } = req.params;
+    const mentorId = req.user._id;
+
+    const form1 = await Form1.findOne({
+      projectId,
+      mentorId,
+      projectModel: "AssignedProject",
+    })
+      .populate("studentId", "name email rollNo branch section")
+      .populate("teamMembers", "name email rollNo branch section");
+
+    if (!form1) {
+      return res.status(404).json({
+        success: false,
+        message: "Assigned Project Form 1 not found",
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      data: form1,
+    });
+  } catch (error) {
+    console.error("Error fetching Assigned Form1:", error);
+
+    res.status(500).json({
+      success: false,
+      message: "Server error",
+    });
+  }
+};
+
+const approveAssignedForm1 = async (req, res) => {
+  try {
+    const { projectId } = req.params;
+    const mentorId = req.user._id;
+
+    const form1 = await Form1.findOne({
+      projectId,
+      mentorId,
+      projectModel: "AssignedProject",
+    });
+
+    if (!form1) {
+      return res.status(404).json({
+        success: false,
+        message: "Assigned Project Form 1 not found",
+      });
+    }
+
+    form1.status = "approved_by_mentor";
+
+    await form1.save();
+
+    res.status(200).json({
+      success: true,
+      message: "Assigned Project Form 1 approved successfully",
+    });
+  } catch (error) {
+    console.error("Approve Assigned Form1 error:", error);
+
+    res.status(500).json({
+      success: false,
+      message: "Server error",
+    });
+  }
+};
+
+const getForm2ByProjectMentor = async (req, res) => {
   try {
     const { projectId } = req.params;
 
@@ -421,17 +541,22 @@ const getForm2ByProject = async (req, res) => {
       });
     }
 
-    // Fetch all Form2 entries for the project
-    const submissions = await Form2.find({ projectId })
-      .populate("studentId", "name email rollNo branch section group academicYear")
-      .sort({ createdAt: 1 }); // earliest first
+    const form2 = await Form2.findOne({ projectId })
+      .populate("members.studentId", "name email rollNo branch section group academicYear");
+
+    if (!form2) {
+      return res.status(404).json({
+        success: false,
+        message: "Form2 not submitted yet",
+      });
+    }
 
     return res.status(200).json({
       success: true,
-      submissions,
+      form2,
     });
   } catch (error) {
-    console.error("Error fetching Form2 submissions:", error);
+    console.error("Error fetching Form2:", error);
     return res.status(500).json({
       success: false,
       message: error.message,
@@ -443,28 +568,42 @@ const approveForm2 = async (req, res) => {
   try {
     const { projectId, studentId } = req.params;
 
-    const form2 = await Form2.findOne({ projectId, studentId });
+    const form2 = await Form2.findOne({ projectId });
+
     if (!form2) {
       return res.status(404).json({
         success: false,
-        message: "Form2 submission not found",
+        message: "Form2 not found"
       });
     }
 
-    form2.approvedByMentor = true; // Add a field in schema if not present
-    form2.approvedAt = new Date();  // Optional timestamp
+    const member = form2.members.find(
+      (m) => m.studentId.toString() === studentId
+    );
+
+    if (!member) {
+      return res.status(404).json({
+        success: false,
+        message: "Student not found"
+      });
+    }
+
+    member.approvedByMentor = true;
+    member.mentorName = req.user.name; // mentor name
+    member.approvedAt = new Date();    // approval date
+
     await form2.save();
 
-    return res.status(200).json({
+    res.status(200).json({
       success: true,
-      message: "Form2 approved successfully",
-      form2,
+      message: "Form2 approved successfully"
     });
+
   } catch (error) {
-    console.error("Error approving Form2:", error);
-    return res.status(500).json({
+    console.error(error);
+    res.status(500).json({
       success: false,
-      message: error.message,
+      message: error.message
     });
   }
 };
@@ -542,9 +681,11 @@ module.exports = {
   reviewIdeaProject,
   getMyApprovedProjects,
   getProjectDocuments,
-  getForm1ByProject,
+  getForm1ByProjectMentor,
   approveForm1,
-  getForm2ByProject,
+  getAssignedForm1ByProject,
+  approveAssignedForm1,
+  getForm2ByProjectMentor,
   approveForm2,
   getProjectForm3,
   evaluateForm3Week,

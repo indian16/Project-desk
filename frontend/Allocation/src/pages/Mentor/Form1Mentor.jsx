@@ -1,5 +1,10 @@
 import React, { useEffect, useState } from "react";
-import { getForm1ByProject, approveForm1 } from "../../services/mentorService";
+import {
+  getForm1ByProjectMentor,
+  approveForm1,
+  getAssignedForm1,
+  approveAssignedForm1,
+} from "../../services/mentorService";
 
 const Form1Mentor = ({ projectId }) => {
   const [form, setForm] = useState(null);
@@ -9,7 +14,15 @@ const Form1Mentor = ({ projectId }) => {
   useEffect(() => {
     const fetchForm = async () => {
       try {
-        const res = await getForm1ByProject(projectId);
+        let res;
+
+        // try idea first
+        res = await getForm1ByProjectMentor(projectId);
+
+        if (!res.success) {
+          // fallback to assigned
+          res = await getAssignedForm1(projectId);
+        }
 
         if (res.success) {
           setForm(res.data);
@@ -28,17 +41,24 @@ const Form1Mentor = ({ projectId }) => {
     try {
       setApproving(true);
 
-      const res = await approveForm1(projectId); // calls your service correctly
+      let res;
+
+      if (form.projectModel === "AssignedProject") {
+        res = await approveAssignedForm1(projectId);
+      } else {
+        res = await approveForm1(projectId);
+      }
 
       if (res.success) {
         alert("Form 1 Approved Successfully");
 
-        // Update local form status so UI reflects approval
-        setForm((prev) => ({ ...prev, status: "approved_by_mentor" }));
+        setForm((prev) => ({
+          ...prev,
+          status: "approved_by_mentor",
+        }));
       }
     } catch (error) {
       console.error("Approval error", error);
-      alert("Failed to approve Form 1");
     } finally {
       setApproving(false);
     }
@@ -185,12 +205,9 @@ const Form1Mentor = ({ projectId }) => {
       {form.status === "pending" && (
         <button
           onClick={handleApprove}
-          disabled={approving}
-          className={`px-6 py-2 rounded text-white ${
-            approving ? "bg-gray-400" : "bg-green-600 hover:bg-green-700"
-          }`}
+          className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded"
         >
-          {approving ? "Approving..." : "Approve Form1"}
+          Approve Form1
         </button>
       )}
     </div>

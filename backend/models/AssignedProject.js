@@ -1,3 +1,4 @@
+// models/AssignedProject.js
 const mongoose = require("mongoose");
 
 const assignedProjectSchema = new mongoose.Schema({
@@ -16,12 +17,21 @@ const assignedProjectSchema = new mongoose.Schema({
   technology: { type: String, required: true },
 
   // ✅ Mentor selected by student at submission
-  selectedMentor: { 
+  selectedMentor1: { 
     type: mongoose.Schema.Types.ObjectId, 
     ref: "Mentor", 
     required: true 
   },
-
+  selectedMentor2: { 
+    type: mongoose.Schema.Types.ObjectId, 
+    ref: "Mentor", 
+    required: true 
+  },
+  selectedMentor3: { 
+    type: mongoose.Schema.Types.ObjectId, 
+    ref: "Mentor", 
+    required: true 
+  },
  // ✅ Mentor who finally approved (filled when approved)
   approvedMentor: { 
     type: mongoose.Schema.Types.ObjectId, 
@@ -52,7 +62,19 @@ const assignedProjectSchema = new mongoose.Schema({
     enum: ["pending", "approve", "reject"],
     default: "pending",
   },
+
+  rejectedMentors: [{ type: mongoose.Schema.Types.ObjectId, ref: "Mentor" }], // NEW
+  feedbacks: [ // NEW
+    {
+      mentor: { type: mongoose.Schema.Types.ObjectId, ref: "Mentor" },
+      action: { type: String, enum: ["approve", "reject"], required: true },
+      reason: { type: String, default: "" }
+    }
+  ],
+  rejectionReason: {
+    type: String,
+    default: null,
+  },
 }, { timestamps: true });
 
 module.exports = mongoose.model("AssignedProject", assignedProjectSchema);
-

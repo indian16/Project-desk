@@ -39,6 +39,7 @@ const {
   getChecklistFilters,
   registerHead,
   getProjectDocuments,
+  getProjectFormForHead,
 } = require("../controllers/headController");
 const upload = multer({ dest: "uploads/" });
 
@@ -118,4 +119,6 @@ router.get("/checklist/filters", getChecklistFilters);
 // View project checklist documents (Head)
 router.post("/register-head", registerHead);
 router.get("/project-documents/:projectId", getProjectDocuments);
+router.get("/forms/:formType/:projectId", getProjectFormForHead);
+
 module.exports = router;

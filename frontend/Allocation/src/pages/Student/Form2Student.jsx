@@ -2,172 +2,299 @@ import React, { useState, useEffect } from "react";
 import { saveForm2, getForm2ByProject } from "../../services/studentService";
 
 const Form2Student = () => {
-  const [formData, setFormData] = useState({
-    member: "",
-    moduleName: "",
-    functionalityName: "",
-    softDeadline: "",
-    hardDeadline: "",
-    details: "",
+  const [students, setStudents] = useState([]);
+  const [expandedStudent, setExpandedStudent] = useState(null);
+  const [expandedModule, setExpandedModule] = useState({});
+  const [loadingIndex, setLoadingIndex] = useState(null);
+  const [toast, setToast] = useState({
+    show: false,
+    message: "",
+    type: "success",
   });
 
-  const [loading, setLoading] = useState(false);
-
   useEffect(() => {
-    // 🔥 Get logged-in user name from localStorage
-    const storedUser = JSON.parse(localStorage.getItem("user"));
-    const userName = storedUser?.name || "Student";
-
-    setFormData((prev) => ({
-      ...prev,
-      member: userName,
-    }));
-
-    const fetchForm = async () => {
-      try {
-        const res = await getForm2ByProject();
-        if (res?.form) {
-          setFormData(res.form);
-        }
-      } catch (err) {
-        console.error(err);
-      }
-    };
-
-    fetchForm();
+    fetchForms();
   }, []);
 
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
+  const fetchForms = async () => {
     try {
-      await saveForm2(formData);
-      alert("Form 2 submitted successfully!");
+      const res = await getForm2ByProject();
+      if (!res?.students) return;
+
+      const membersMap = {};
+      if (res.form2?.members) {
+        res.form2.members.forEach((m) => {
+          membersMap[m.studentId.toString()] = m;
+        });
+      }
+
+      const formatted = res.students.map((student) => {
+        const member = membersMap[student.studentId?.toString()];
+        return {
+          studentId: student.studentId,
+          studentName: student.studentName,
+          approvedByMentor: member?.approvedByMentor || false,
+          mentorName: member?.mentorName || "",
+          approvedAt: member?.approvedAt || null,
+          modules:
+            member?.modules?.length > 0
+              ? member.modules.map((m) => ({
+                  ...m,
+                  softDeadline: m.softDeadline
+                    ? new Date(m.softDeadline).toISOString().split("T")[0]
+                    : "",
+                  hardDeadline: m.hardDeadline
+                    ? new Date(m.hardDeadline).toISOString().split("T")[0]
+                    : "",
+                }))
+              : [
+                  {
+                    moduleName: "",
+                    functionalityName: "",
+                    softDeadline: "",
+                    hardDeadline: "",
+                    details: "",
+                  },
+                ],
+        };
+      });
+
+      setStudents(formatted);
     } catch (err) {
       console.error(err);
-      alert(err.message);
+    }
+  };
+
+  const toggleStudent = (index) => {
+    setExpandedStudent((prev) => (prev === index ? null : index));
+  };
+
+  const toggleModule = (studentIndex, moduleIndex) => {
+    const key = `${studentIndex}-${moduleIndex}`;
+    setExpandedModule((prev) => ({
+      ...prev,
+      [key]: !prev[key],
+    }));
+  };
+
+  const handleChange = (e, sIndex, mIndex) => {
+    const { name, value } = e.target;
+    setStudents((prev) => {
+      const updated = [...prev];
+      updated[sIndex].modules[mIndex][name] = value;
+      return updated;
+    });
+  };
+
+  const addModule = (sIndex) => {
+    setStudents((prev) =>
+      prev.map((student, index) =>
+        index === sIndex
+          ? {
+              ...student,
+              modules: [
+                ...student.modules,
+                {
+                  moduleName: "",
+                  functionalityName: "",
+                  softDeadline: "",
+                  hardDeadline: "",
+                  details: "",
+                },
+              ],
+            }
+          : student,
+      ),
+    );
+  };
+
+  const deleteModule = (sIndex, mIndex) => {
+    setStudents((prev) => {
+      const updated = [...prev];
+      if (updated[sIndex].modules.length === 1) {
+        showToast("At least one module required", "error");
+        return prev;
+      }
+      updated[sIndex].modules.splice(mIndex, 1);
+      return updated;
+    });
+  };
+
+  const showToast = (message, type = "success") => {
+    setToast({ show: true, message, type });
+    setTimeout(() => setToast({ show: false, message: "", type }), 3000);
+  };
+
+  const handleSubmit = async (sIndex) => {
+    const student = students[sIndex];
+    setLoadingIndex(sIndex);
+
+    try {
+      await saveForm2({
+        studentId: student.studentId,
+        member: student.studentName,
+        modules: student.modules,
+      });
+      showToast(`Modules saved for ${student.studentName}`, "success");
+      fetchForms();
+    } catch (err) {
+      console.error(err);
+      showToast(err.response?.data?.message || err.message, "error");
     } finally {
-      setLoading(false);
+      setLoadingIndex(null);
     }
   };
 
   return (
-    <div className="bg-white border rounded-xl p-8 shadow-sm max-w-4xl mx-auto">
-      <div className="mb-8 text-center">
-        <h2 className="text-2xl font-semibold text-slate-800">
-          Form 2 — Member Module Details
-        </h2>
-      </div>
-
-      <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Member Name */}
-        <div>
-          <label className="block text-sm font-medium text-slate-700 mb-2">
-            Member Name
-          </label>
-          <input
-            type="text"
-            name="member"
-            value={formData.member}
-            readOnly
-            className="w-full border border-slate-300 rounded-lg px-4 py-2 bg-slate-100 text-slate-600"
-          />
-        </div>
-
-        {/* Module Name */}
-        <div>
-          <label className="block text-sm font-medium text-slate-700 mb-2">
-            Module Name
-          </label>
-          <input
-            type="text"
-            name="moduleName"
-            value={formData.moduleName}
-            onChange={handleChange}
-            required
-            className="w-full border border-slate-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 outline-none"
-          />
-        </div>
-
-        {/* Functionality Name */}
-        <div>
-          <label className="block text-sm font-medium text-slate-700 mb-2">
-            Functionality Name
-          </label>
-          <input
-            type="text"
-            name="functionalityName"
-            value={formData.functionalityName}
-            onChange={handleChange}
-            required
-            className="w-full border border-slate-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 outline-none"
-          />
-        </div>
-
-        {/* Deadlines */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">
-              Soft Deadline
-            </label>
-            <input
-              type="date"
-              name="softDeadline"
-              value={formData.softDeadline}
-              onChange={handleChange}
-              required
-              className="w-full border border-slate-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 outline-none"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">
-              Hard Deadline
-            </label>
-            <input
-              type="date"
-              name="hardDeadline"
-              value={formData.hardDeadline}
-              onChange={handleChange}
-              required
-              className="w-full border border-slate-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 outline-none"
-            />
-          </div>
-        </div>
-
-        {/* Details */}
-        <div>
-          <label className="block text-sm font-medium text-slate-700 mb-2">
-            Functionality Details
-          </label>
-          <textarea
-            name="details"
-            value={formData.details}
-            onChange={handleChange}
-            rows="5"
-            required
-            className="w-full border border-slate-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-500 outline-none resize-none"
-          />
-        </div>
-
-        {/* Submit */}
-        <button
-          type="submit"
-          disabled={loading}
-          className={`w-full py-3 rounded-lg font-medium transition ${
-            loading
-              ? "bg-blue-300 text-white cursor-not-allowed"
-              : "bg-blue-600 text-white hover:bg-blue-700"
+    <div className="max-w-7xl mx-auto p-4 sm:p-6 md:p-10 bg-indigo-50 rounded-3xl shadow-lg space-y-6 relative">
+      {/* Toast Notification */}
+      {toast.show && (
+        <div
+          className={`fixed top-5 left-1/2 transform -translate-x-1/2 z-50 px-6 py-3 rounded-xl shadow-lg text-white font-semibold text-center max-w-sm w-full transition duration-300 ${
+            toast.type === "success" ? "bg-green-500" : "bg-red-500"
           }`}
         >
-          {loading ? "Submitting..." : "Submit Form 2"}
-        </button>
-      </form>
+          {toast.message}
+        </div>
+      )}
+
+      <h2 className="text-2xl sm:text-3xl font-bold text-center text-indigo-800">
+        Form 2 — Member Module Planning
+      </h2>
+
+      {students.map((student, sIndex) => (
+        <div
+          key={student.studentId}
+          className="border rounded-lg bg-white shadow-md"
+        >
+          {/* Student Header */}
+          <div
+            onClick={() => toggleStudent(sIndex)}
+            className="cursor-pointer p-4 bg-indigo-50 flex justify-between items-center rounded-t-lg"
+          >
+            <h3 className="font-semibold text-indigo-700 text-sm sm:text-base">
+              👤 {student.studentName}{" "}
+              <span className="ml-2 text-gray-500 text-xs sm:text-sm">
+                ({student.modules.length} modules)
+              </span>
+            </h3>
+            <span>{expandedStudent === sIndex ? "▲" : "▼"}</span>
+          </div>
+
+          {/* Student Content */}
+          {expandedStudent === sIndex && (
+            <div className="p-5 space-y-4">
+              {/* Mentor Approval */}
+              {student.approvedByMentor && (
+                <div className="bg-green-100 text-green-700 p-3 rounded text-sm sm:text-base">
+                  ✔ Approved by <b>{student.mentorName}</b> on{" "}
+                  {new Date(student.approvedAt).toLocaleDateString()}
+                </div>
+              )}
+
+              {student.modules.map((module, mIndex) => {
+                const moduleKey = `${student.studentId}-${mIndex}`;
+                return (
+                  <div key={moduleKey} className="border rounded-lg bg-gray-50">
+                    {/* Module Header */}
+                    <div
+                      onClick={() => toggleModule(sIndex, mIndex)}
+                      className="cursor-pointer p-3 flex justify-between bg-gray-200 rounded-t-lg"
+                    >
+                      <span className="font-medium text-sm sm:text-base">
+                        {module.moduleName || `Module ${mIndex + 1}`}
+                      </span>
+                      <span>
+                        {expandedModule[`${sIndex}-${mIndex}`] ? "▲" : "▼"}
+                      </span>
+                    </div>
+
+                    {/* Module Content */}
+                    {expandedModule[`${sIndex}-${mIndex}`] && (
+                      <div className="p-4 space-y-3">
+                        <input
+                          type="text"
+                          name="moduleName"
+                          placeholder="Module Name"
+                          value={module.moduleName}
+                          disabled={student.approvedByMentor}
+                          onChange={(e) => handleChange(e, sIndex, mIndex)}
+                          className="w-full border px-3 py-2 rounded focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                        />
+                        <input
+                          type="text"
+                          name="functionalityName"
+                          placeholder="Functionality Name"
+                          value={module.functionalityName}
+                          disabled={student.approvedByMentor}
+                          onChange={(e) => handleChange(e, sIndex, mIndex)}
+                          className="w-full border px-3 py-2 rounded focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                        />
+                        <div className="grid grid-cols-2 gap-3">
+                          <input
+                            type="date"
+                            name="softDeadline"
+                            value={module.softDeadline}
+                            disabled={student.approvedByMentor}
+                            onChange={(e) => handleChange(e, sIndex, mIndex)}
+                            className="border px-3 py-2 rounded"
+                          />
+                          <input
+                            type="date"
+                            name="hardDeadline"
+                            value={module.hardDeadline}
+                            disabled={student.approvedByMentor}
+                            onChange={(e) => handleChange(e, sIndex, mIndex)}
+                            className="border px-3 py-2 rounded"
+                          />
+                        </div>
+                        <textarea
+                          name="details"
+                          rows="3"
+                          placeholder="Module Details"
+                          value={module.details}
+                          disabled={student.approvedByMentor}
+                          onChange={(e) => handleChange(e, sIndex, mIndex)}
+                          className="w-full border px-3 py-2 rounded focus:outline-none focus:ring-2 focus:ring-indigo-300 resize-none"
+                        />
+
+                        {!student.approvedByMentor && (
+                          <button
+                            onClick={() => deleteModule(sIndex, mIndex)}
+                            className="bg-red-500 text-white px-3 py-1 rounded text-sm sm:text-base"
+                          >
+                            Delete Module
+                          </button>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+
+              {/* Buttons */}
+              {!student.approvedByMentor && (
+                <div className="flex flex-col sm:flex-row gap-3 pt-2">
+                  <button
+                    onClick={() => addModule(sIndex)}
+                    className="bg-green-600 text-white px-4 py-2 rounded w-full sm:w-auto"
+                  >
+                    + Add Module
+                  </button>
+
+                  <button
+                    onClick={() => handleSubmit(sIndex)}
+                    disabled={loadingIndex === sIndex}
+                    className="bg-indigo-600 text-white px-4 py-2 rounded w-full sm:w-auto"
+                  >
+                    {loadingIndex === sIndex ? "Saving..." : "Submit Modules"}
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      ))}
     </div>
   );
 };

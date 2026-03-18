@@ -1,4 +1,3 @@
-// models/StudentChecklist.js
 const mongoose = require("mongoose");
 
 const studentChecklistSchema = new mongoose.Schema({
@@ -18,6 +17,7 @@ const studentChecklistSchema = new mongoose.Schema({
     enum: ["ProjectIdea", "AssignedProject"],
     required: true
   },
+
   checklistItem: {
     type: String,   
     required: true,
@@ -26,7 +26,12 @@ const studentChecklistSchema = new mongoose.Schema({
   fileName: { type: String, required: true },
   filePath: { type: String, required: true },
 
-  uploadedAt: { type: Date, default: Date.now }
+  uploadedAt: { type: Date, default: Date.now },
+
+  // ✅ Add these fields for filters
+  branch: { type: String, default: null },
+  section: { type: String, default: null },
+  group: { type: String, default: null },
 });
 
 module.exports = mongoose.model("StudentChecklist", studentChecklistSchema);

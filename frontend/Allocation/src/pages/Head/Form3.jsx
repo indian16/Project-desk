@@ -9,29 +9,21 @@ import {
 const AlertModal = ({ message, type, onClose }) => {
   if (!message) return null;
 
-  const bgColor = type === "success" ? "bg-green-100" : "bg-red-100";
-  const borderColor =
-    type === "success" ? "border-green-500" : "border-red-500";
-  const textColor = type === "success" ? "text-green-800" : "text-red-800";
-  const icon = type === "success" ? "✅" : "❌";
+  const styles =
+    type === "success"
+      ? "bg-green-50 border-green-500 text-green-700"
+      : "bg-red-50 border-red-500 text-red-700";
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900 bg-opacity-50 backdrop-blur-sm">
+    <div className="fixed top-5 right-5 z-50 w-[300px]">
       <div
-        className={`p-6 rounded-xl shadow-2xl w-full max-w-sm border-l-4 ${bgColor} ${borderColor}`}
+        className={`p-4 rounded-lg shadow-md border-l-4 ${styles} flex justify-between items-start`}
       >
-        <div className="flex justify-between items-start">
-          <div className="flex items-center">
-            <span className="text-2xl mr-3">{icon}</span>
-            <p className={`font-semibold ${textColor}`}>{message}</p>
-          </div>
-          <button
-            onClick={onClose}
-            className="text-gray-500 hover:text-gray-800 transition p-1 rounded-full"
-          >
-            ✕
-          </button>
-        </div>
+        <p className="text-sm font-medium pr-2">{message}</p>
+
+        <button onClick={onClose} className="text-gray-500 hover:text-black">
+          ✕
+        </button>
       </div>
     </div>
   );

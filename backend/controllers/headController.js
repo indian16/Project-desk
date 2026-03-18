@@ -302,8 +302,10 @@ const getPendingIdeasForHead = async (req, res) => {
       ? { status: "pending", academicYear }
       : { status: "pending" };
 
-    const pendingIdeas = await ProjectIdea.find(filter)
-      .populate("teamMembers", "name email rollno")
+    const pendingIdeas = await ProjectIdea.find(filter).populate(
+      "teamMembers",
+      "name email rollno",
+    );
     res.status(200).json(pendingIdeas);
   } catch (error) {
     console.error("Error fetching pending ideas:", error.message);
@@ -363,8 +365,10 @@ const getReviewedIdeasForHead = async (req, res) => {
         }
       : { status: { $in: ["approved_by_head", "rejected_by_head"] } };
 
-    const reviewedIdeas = await ProjectIdea.find(filter)
-      .populate("teamMembers", "name email rollno")
+    const reviewedIdeas = await ProjectIdea.find(filter).populate(
+      "teamMembers",
+      "name email rollno",
+    );
 
     res.status(200).json(reviewedIdeas);
   } catch (error) {
@@ -471,8 +475,10 @@ const getAllInterviews = async (req, res) => {
     };
     if (academicYear) filter.academicYear = academicYear;
 
-    const ideas = await ProjectIdea.find(filter)
-      .populate("teamMembers", "name email rollno")
+    const ideas = await ProjectIdea.find(filter).populate(
+      "teamMembers",
+      "name email rollno",
+    );
 
     if (!ideas || ideas.length === 0) {
       return res.status(404).json({ message: "No interviews found" });
@@ -680,7 +686,6 @@ const createForm3ForAllProjects = async (req, res) => {
       message: "Form3 created successfully",
       form3,
     });
-
   } catch (error) {
     console.error("CREATE FORM3 ERROR:", error);
     res.status(500).json({
@@ -895,12 +900,17 @@ const getSummaryCounts = async (req, res) => {
 // ======================================
 const getAllProjectsCombined = async (req, res) => {
   try {
+
     // ===========================
-    // FETCH PROJECT IDEAS
+    // PROJECT IDEAS
     // ===========================
     const ideas = await ProjectIdea.find()
-      .populate("mentor")
-      .populate("teamMembers");
+      .populate("teamMembers", "name email")
+      .populate("selectedMentor1", "name email")
+      .populate("selectedMentor2", "name email")
+      .populate("selectedMentor3", "name email")
+      .populate("confirmedMentor", "name email")
+      .populate("rejectedMentors", "name email");
 
     const formattedIdeas = ideas.map((i) => ({
       type: "idea",
@@ -908,53 +918,98 @@ const getAllProjectsCombined = async (req, res) => {
       title: i.title,
       description: i.description,
       technology: i.technology,
-      status: i.status,
-      teamLead: i.teamLead,
+
+      // teamLead without using id
+      teamLead: {
+        id: i.teamLead.id || null,
+        name: i.teamLead.name,
+        email: i.teamLead.email,
+      },
+
       teamMembers: i.teamMembers,
-      mentor: i.mentor,
+
+      mentors: {
+        mentor1: i.selectedMentor1,
+        mentor2: i.selectedMentor2,
+        mentor3: i.selectedMentor3
+      },
+
+      confirmedMentor: i.confirmedMentor,
+      rejectedMentors: i.rejectedMentors,
+
+      status: i.status,
+
       academicYear: i.academicYear,
       branch: i.branch,
       section: i.section,
       group: i.group,
+
+      feedbacks: i.feedbacks
     }));
 
     // ===========================
-    // FETCH ASSIGNED PROJECTS
+    // ASSIGNED PROJECTS
     // ===========================
     const assigned = await AssignedProject.find()
-      .populate("teamMembers")
-      .populate("selectedMentor")
-      .populate("approvedMentor");
+      .populate("teamMembers", "name email")
+      .populate("selectedMentor1", "name email")
+      .populate("selectedMentor2", "name email")
+      .populate("selectedMentor3", "name email")
+      .populate("approvedMentor", "name email")
+      .populate("rejectedMentors", "name email");
 
     const formattedAssigned = assigned.map((a) => ({
       type: "assigned",
       id: a._id,
+
       title: a.title,
       description: a.description,
       technology: a.technology,
-      status: a.status,
-      teamLead: a.teamLead,
+
+      // teamLead without id populate
+      teamLead: {
+        id: a.teamLead.id || null,
+        name: a.teamLead.name,
+        email: a.teamLead.email,
+      },
+
       teamMembers: a.teamMembers,
-      selectedMentor: a.selectedMentor,
+
+      mentors: {
+        mentor1: a.selectedMentor1,
+        mentor2: a.selectedMentor2,
+        mentor3: a.selectedMentor3
+      },
+
       approvedMentor: a.approvedMentor,
+      rejectedMentors: a.rejectedMentors,
+
+      status: a.status,
+
       academicYear: a.academicYear,
       branch: a.branch,
       section: a.section,
       group: a.group,
+
+      feedbacks: a.feedbacks
     }));
 
     // ===========================
-    // MERGE BOTH LISTS
+    // MERGE
     // ===========================
     const allProjects = [...formattedIdeas, ...formattedAssigned];
 
-    return res.json({
+    res.json({
       success: true,
       total: allProjects.length,
-      projects: allProjects,
+      projects: allProjects
     });
+
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
+    res.status(500).json({
+      success: false,
+      message: err.message
+    });
   }
 };
 
@@ -1053,7 +1108,7 @@ const registerHead = async (req, res) => {
       name,
       email,
       password: hashedPassword,
-      role: "head"
+      role: "head",
     });
 
     res.status(201).json({
@@ -1062,10 +1117,9 @@ const registerHead = async (req, res) => {
         id: newHead._id,
         name: newHead.name,
         email: newHead.email,
-        role: newHead.role
-      }
+        role: newHead.role,
+      },
     });
-
   } catch (error) {
     console.error("Register Head Error:", error);
     res.status(500).json({ message: "Server error" });
@@ -1097,7 +1151,7 @@ const getProjectDocuments = async (req, res) => {
     // 3️⃣ Group uploads under checklist items
     const groupedData = checklistItems.map((item) => {
       const relatedUploads = uploads.filter(
-        (u) => u.checklistItem?.toString() === item._id.toString()
+        (u) => u.checklistItem?.toString() === item._id.toString(),
       );
 
       return {
@@ -1125,6 +1179,61 @@ const getProjectDocuments = async (req, res) => {
     });
   }
 };
+
+const getProjectFormForHead = async (req, res) => {
+  try {
+    const { projectId, formType } = req.params;
+
+    if (!projectId || !formType) {
+      return res.status(400).json({
+        success: false,
+        message: "Project ID and form type are required",
+      });
+    }
+
+    let formData = null;
+
+    if (formType === "form1") {
+      formData = await Form1.findOne({ projectId })
+        .populate("studentId", "name email rollNo branch section")
+        .populate("teamMembers", "name email rollNo branch section");
+    }
+
+    if (formType === "form2") {
+      formData = await Form2.findOne({ projectId }).populate(
+        "members.studentId",
+        "name email rollNo branch section group academicYear",
+      );
+    }
+
+    if (formType === "form3") {
+      formData = await StudentForm3.findOne({ projectId });
+    }
+
+    if (!formData) {
+      return res.status(404).json({
+        success: false,
+        message: `${formType} not submitted yet`,
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      data: formData,
+    });
+  } catch (error) {
+    console.error("Error fetching form for head:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Server error",
+    });
+  }
+};
+
+// ======================================
+// 2️⃣ COMBINED PROJECTS (IDEA + ASSIGNED)
+// ======================================
 
 module.exports = {
   getProjectsByYear,
@@ -1162,4 +1271,5 @@ module.exports = {
   getChecklistFilters,
   registerHead,
   getProjectDocuments,
+  getProjectFormForHead,
 };

@@ -21,7 +21,9 @@ export const submitProjectBankForm = async (formData) => {
       title: formData.title,
       description: formData.description,
       technology: formData.technology,
-      selectedMentor: formData.selectedMentor, // Mentor ID
+      selectedMentor1: formData.selectedMentor1, // Mentor ID
+      selectedMentor2: formData.selectedMentor2, // Mentor ID
+      selectedMentor3: formData.selectedMentor3, // Mentor ID
       teamMembers: formData.teamMembers || [],
       teamLead: {
         id: localStorage.getItem("studentId"),
@@ -233,7 +235,7 @@ export const saveForm2 = async (formData) => {
 // ✅ Get all Form 2 entries for the logged-in student's project
 export const getForm2ByProject = async () => {
   try {
-    const res = await api.get("/student/form2/project");
+    const res = await api.get("/student/form2");
     return res.data;
   } catch (error) {
     console.error("Error fetching Form 2 data:", error);
@@ -248,9 +250,9 @@ export const getForm3 = async () => {
   return res.data;
 };
 
-export const submitForm3Week = async (projectId, formData) => {
+export const submitForm3Week = async (formData) => {
   try {
-    const res = await api.post(`/student/form3/${projectId}/week`, formData);
+    const res = await api.post(`/student/form3/week`, formData);
     return res.data;
   } catch (error) {
     console.error("Error submitting Form 3 week:", error);

@@ -26,7 +26,6 @@ const Documentation = () => {
   return (
     <div className="min-h-screen bg-slate-100 p-4 md:p-8">
       <div className="max-w-[1000px] mx-auto">
-
         {/* Header */}
         <div className="bg-indigo-600 p-6 rounded-t-[2rem] flex items-center justify-between shadow-lg">
           <h2 className="text-white font-bold text-xl flex items-center gap-2">
@@ -44,7 +43,9 @@ const Documentation = () => {
               <Loader2 className="animate-spin text-indigo-600" />
             </div>
           ) : documents.length === 0 ? (
-            <p className="text-center text-slate-500">No documents available.</p>
+            <p className="text-center text-slate-500">
+              No documents available.
+            </p>
           ) : (
             <div className="space-y-4">
               {documents.map((doc) => (
