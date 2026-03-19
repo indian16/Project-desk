@@ -26,12 +26,22 @@ const Form3Mentor = ({ projectId, onClose }) => {
     const fetchForm3 = async () => {
       try {
         const res = await getProjectForm3(projectId);
-        if (res.success) {
-          setWeeks(res.form3.weeks || []);
-          // prefill savedWeeks for already evaluated weeks
-          const alreadySaved = (res.form3.weeks || [])
+
+        if (res.success && res.students?.length > 0) {
+          const allWeeks = res.students.flatMap((s) =>
+            (s.weeks || []).map((w) => ({
+              ...w,
+              studentName: s.name,
+              studentId: s.studentId,
+            })),
+          );
+
+          setWeeks(allWeeks);
+
+          const alreadySaved = allWeeks
             .filter((w) => w.marks !== undefined && w.marks !== null)
             .map((w) => w.weekNumber);
+
           setSavedWeeks(alreadySaved);
         }
       } catch (err) {
@@ -50,12 +60,13 @@ const Form3Mentor = ({ projectId, onClose }) => {
     setWeeks(updated);
   };
 
-  const handleEvaluate = async (week) => {
+  const handleEvaluate = async (week, studentId) => {
     try {
       setSavingWeek(week.weekNumber);
 
       await evaluateForm3Week({
         projectId,
+        studentId,
         weekNumber: week.weekNumber,
         marks: week.marks,
         mentorRemark: week.mentorRemark,
@@ -201,7 +212,7 @@ const Form3Mentor = ({ projectId, onClose }) => {
                   />
 
                   <button
-                    onClick={() => handleEvaluate(week)}
+                    onClick={() => handleEvaluate(week, week.studentId)}
                     disabled={
                       savingWeek === week.weekNumber ||
                       savedWeeks.includes(week.weekNumber)
