@@ -650,7 +650,7 @@ const uploadChecklistFile = async (req, res) => {
       }
 
       existing.fileName = req.file.originalname;
-      existing.filePath = req.file.path;
+      existing.filePath = `/uploads/checklist/${req.file.filename}`;
       existing.projectType = projectType;
       existing.uploadedAt = new Date();
       existing.branch = student.branch || null;
@@ -673,7 +673,7 @@ const uploadChecklistFile = async (req, res) => {
       projectType,
       checklistItem: checklistItemId.toString(),
       fileName: req.file.originalname,
-      filePath: req.file.path,
+      filePath: `/uploads/checklist/${req.file.filename}`,
       uploadedAt: new Date(),
       branch: student.branch || null,
       section: student.section || null,
