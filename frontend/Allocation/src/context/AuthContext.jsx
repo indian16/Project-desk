@@ -1,11 +1,16 @@
-// frontend/Allocation/src/context/AuthContext.jsx
 import React, { createContext, useState, useEffect } from "react";
 
 export const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null);     // Stores user info including role
-  const [token, setToken] = useState(null);   // Stores auth token
+  const [user, setUser] = useState(() => {
+    const storedUser = localStorage.getItem("user");
+    return storedUser ? JSON.parse(storedUser) : null;
+  });
+  
+  const [token, setToken] = useState(() => {
+    return localStorage.getItem("token") || null;
+  }); // Stores auth token
 
   // Restore from localStorage on page load
   useEffect(() => {

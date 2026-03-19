@@ -139,11 +139,11 @@ const HeadMessage = ({ user }) => {
 
       {/* ================= INPUT BAR ================= */}
       <div className="border-t border-slate-200 bg-white px-4 py-3 shrink-0">
-        <div className="flex items-center gap-2">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
           <select
             value={recipientRole}
             onChange={(e) => setRecipientRole(e.target.value)}
-            className="border border-slate-200 rounded-lg px-3 py-2 text-sm font-semibold text-slate-600 bg-white"
+            className="flex-shrink-0 border border-slate-200 rounded-lg px-3 py-2 text-sm font-semibold text-slate-600 bg-white"
           >
             <option value="student">🎓 Students</option>
             <option value="mentor">🧑‍🏫 Mentors</option>
@@ -155,15 +155,15 @@ const HeadMessage = ({ user }) => {
             value={newMessage}
             onChange={(e) => setNewMessage(e.target.value)}
             placeholder="Type your message…"
-            className="flex-1 border border-slate-200 rounded-lg px-4 py-2 text-sm outline-none"
+            className="flex-1 border border-slate-200 rounded-lg px-4 py-2 text-sm outline-none min-w-0"
             onKeyDown={(e) => e.key === "Enter" && handleSend()}
           />
 
           <button
             onClick={handleSend}
             disabled={loading || !newMessage.trim()}
-            className="bg-indigo-600 text-white px-5 py-2 rounded-lg text-sm font-bold
-                       hover:bg-indigo-700 transition disabled:opacity-40"
+            className="flex-shrink-0 bg-indigo-600 text-white px-5 py-2 rounded-lg text-sm font-bold
+               hover:bg-indigo-700 transition disabled:opacity-40"
           >
             {loading ? "..." : "Send"}
           </button>
