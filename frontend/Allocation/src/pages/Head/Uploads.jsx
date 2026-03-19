@@ -91,7 +91,7 @@ const Uploads = () => {
     },
     {
       id: "studentList",
-      title: "Student Roster",
+      title: "Student List",
       icon: <Users className="text-emerald-600" />,
       ref: studentListRef,
       description: "Master list of eligible students for allocation.",
