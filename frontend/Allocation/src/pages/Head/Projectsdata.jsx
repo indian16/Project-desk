@@ -106,6 +106,12 @@ const ProjectsData = () => {
     setDocuments([]);
   };
 
+  const handleSingleDownload = (url, fileName) => {
+    const backendURL = import.meta.env.VITE_API_URL.split("/api")[0];
+    const fullURL = `${backendURL}${url}`;
+    window.open(fullURL, "_blank");
+  };
+
   // ─── FILTERED PROJECTS ───
   const filteredProjects = allProjects.filter((p) => {
     // Filter by type
@@ -394,14 +400,14 @@ const ProjectsData = () => {
                               {u.fileName}
                             </span>
 
-                            <a
-                              href={u.fileUrl}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="text-blue-600 text-sm font-semibold"
+                            {/* <button
+                              onClick={() =>
+                                handleSingleDownload(u.fileUrl, u.fileName)
+                              }
+                              className="text-green-600 text-sm font-semibold hover:underline"
                             >
                               View
-                            </a>
+                            </button> */}
                           </div>
                         ))}
                       </div>

@@ -14,7 +14,10 @@ const Message = require("../models/Message");
 const bcrypt = require("bcryptjs");
 const Checklist = require("../models/Checklist");
 const StudentChecklist = require("../models/StudentChecklist");
+const Form1 = require("../models/Form1");
+const Form2 = require("../models/Form2");
 const Form3 = require("../models/Form3");
+const StudentForm3 = require("../models/StudentForm3");
 
 // ✅ Get all available academic years
 const getAvailableYears = async (req, res) => {
@@ -1161,7 +1164,7 @@ const getProjectDocuments = async (req, res) => {
           uploadId: u._id,
           student: u.student,
           fileName: u.fileName,
-          fileUrl: `/uploads/checklist/${u.filePath.split("\\").pop()}`,
+          fileUrl: u.filePath,
           uploadedAt: u.uploadedAt,
         })),
       };
@@ -1200,10 +1203,11 @@ const getProjectFormForHead = async (req, res) => {
     }
 
     if (formType === "form2") {
-      formData = await Form2.findOne({ projectId }).populate(
-        "members.studentId",
-        "name email rollNo branch section group academicYear",
-      );
+      formData = await Form2.findOne({ projectId })
+        .populate(
+          "members.studentId",
+          "name email rollNo branch section group academicYear"
+        );
     }
 
     if (formType === "form3") {

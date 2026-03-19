@@ -119,6 +119,9 @@ router.get("/checklist/filters", getChecklistFilters);
 // View project checklist documents (Head)
 router.post("/register-head", registerHead);
 router.get("/project-documents/:projectId", getProjectDocuments);
+// ===========================
+// HEAD VIEW FORMS
+// ===========================
 router.get("/forms/:formType/:projectId", getProjectFormForHead);
 
 module.exports = router;
