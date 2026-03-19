@@ -261,7 +261,11 @@ const submitProjectBankForm = async (req, res) => {
     }
 
     // ❗ Check if mentors are unique
-    const mentorSet = new Set([selectedMentor1, selectedMentor2, selectedMentor3]);
+    const mentorSet = new Set([
+      selectedMentor1,
+      selectedMentor2,
+      selectedMentor3,
+    ]);
 
     if (mentorSet.size !== 3) {
       return res.status(400).json({
@@ -303,7 +307,6 @@ const submitProjectBankForm = async (req, res) => {
       message: "Project Bank form submitted successfully",
       data: newAssigned,
     });
-
   } catch (error) {
     console.error("Submit Project Bank Error:", error);
     res.status(500).json({
@@ -618,7 +621,8 @@ const uploadChecklistFile = async (req, res) => {
     }
 
     // 🔒 Only team lead can upload
-    const projectLeadId = project.teamLead?.id || project.teamLead?._id || project.student;
+    const projectLeadId =
+      project.teamLead?.id || project.teamLead?._id || project.student;
     if (projectLeadId.toString() !== studentId.toString()) {
       return res.status(403).json({
         success: false,
@@ -645,8 +649,10 @@ const uploadChecklistFile = async (req, res) => {
     });
 
     if (existing) {
-      if (existing.filePath && fs.existsSync(existing.filePath)) {
-        fs.unlinkSync(existing.filePath);
+      const fullPath = path.join(__dirname, "..", existing.filePath);
+
+      if (fs.existsSync(fullPath)) {
+        fs.unlinkSync(fullPath);
       }
 
       existing.fileName = req.file.originalname;
