@@ -370,7 +370,7 @@ const MentorDashboard = () => {
                                   }
                                   className="text-green-600 text-sm font-semibold hover:underline"
                                 >
-                                  Download
+                                  View
                                 </button>
                               </div>
                             ))}
