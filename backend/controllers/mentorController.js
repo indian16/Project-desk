@@ -370,7 +370,7 @@ const getProjectDocuments = async (req, res) => {
           uploadId: u._id,
           student: u.student,
           fileName: u.fileName,
-          fileUrl: `/uploads/checklist/${u.filePath.split("\\").pop()}`,
+          fileUrl: u.filePath,
           uploadedAt: u.uploadedAt,
         })),
       };
