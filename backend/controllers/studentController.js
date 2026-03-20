@@ -714,29 +714,38 @@ const saveForm1 = async (req, res) => {
 
     const { formData = {}, submitType } = req.body;
 
-    // ---------------------------
-    // 1️⃣ Find the project
-    // ---------------------------
-    let project =
-      (await AssignedProject.findOne({
-        $or: [{ student: studentId }, { teamMembers: studentId }],
-      })
-        .populate("teamMembers", "name email")
-        .populate("approveMentor", "name")) ||
-      (await ProjectIdea.findOne({
-        $or: [{ "teamLead.id": studentId }, { teamMembers: studentId }],
-      })
-        .populate("teamMembers", "name email")
-        .populate("teamLead.id", "name email")
-        .populate("confirmedMentor", "name"));
+    /// ---------------------------
+// 1️⃣ Find the project
+// ---------------------------
 
-    if (!project) {
-      return res
-        .status(404)
-        .json({ success: false, message: "Project not found" });
-    }
+let project;
+let projectModel;
 
-    const projectModel = project.teamLead ? "ProjectIdea" : "AssignedProject";
+project = await AssignedProject.findOne({
+  $or: [{ "teamLead.id": studentId }, { teamMembers: studentId }],
+})
+  .populate("teamMembers", "name email")
+  .populate("teamLead.id", "name email")
+  .populate("approvedMentor", "name");
+
+if (project) {
+  projectModel = "AssignedProject";
+} else {
+  project = await ProjectIdea.findOne({
+    $or: [{ "teamLead.id": studentId }, { teamMembers: studentId }],
+  })
+    .populate("teamMembers", "name email")
+    .populate("teamLead.id", "name email")
+    .populate("confirmedMentor", "name");
+
+  projectModel = "ProjectIdea";
+}
+
+if (!project) {
+  return res
+    .status(404)
+    .json({ success: false, message: "Project not found" });
+}
 
     // ---------------------------
     // ⭐ Get mentor automatically
@@ -745,8 +754,8 @@ const saveForm1 = async (req, res) => {
     let mentorName = "";
 
     if (projectModel === "AssignedProject") {
-      mentorId = project.approveMentor?._id || project.approveMentor;
-      mentorName = project.approveMentor?.name || "";
+      mentorId = project.approvedMentor?._id || project.approvedMentor;
+      mentorName = project.approvedMentor?.name || "";
     }
 
     if (projectModel === "ProjectIdea") {
