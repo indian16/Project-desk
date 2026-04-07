@@ -71,9 +71,6 @@ A robust, full-stack College Project Allocation and Management System designed t
 ## 🤝 Contributing
 Contributions are welcome! Please fork the repository and submit a pull request for any new features or bug fixes.
 
-## 🛡 License
-This project is currently unlicensed.
-
 ## 📞 Contact & Support
 - **Repository:** [https://github.com/KrishAgarwal-44/Project-Desk](https://github.com/KrishAgarwal-44/Project-Desk)
 - Please feel free to open an issue for any bugs or feature requests.
