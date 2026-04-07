@@ -8,6 +8,7 @@ const Document = require("../models/Document");
 const path = require("path");
 const Checklist = require("../models/Checklist");
 const StudentChecklist = require("../models/StudentChecklist");
+const Interview = require("../models/Interview");
 const fs = require("fs");
 const Form1 = require("../models/Form1");
 const Form2 = require("../models/Form2");
@@ -344,9 +345,17 @@ const getMyIdeaProject = async (req, res) => {
       });
     }
 
+    // 🔥 Fetch interview for this project
+    const interview = await Interview.findOne({
+      idea: projectIdea._id,
+    });
+
     res.status(200).json({
       success: true,
-      projectIdea,
+      projectIdea: {
+        ...projectIdea.toObject(),
+        interview, // ✅ attach interview here
+      },
     });
   } catch (error) {
     console.error("Get My Idea Project Error:", error);
@@ -356,42 +365,6 @@ const getMyIdeaProject = async (req, res) => {
     });
   }
 };
-
-// const selectIdeaMentor = async (req, res) => {
-//   try {
-//     const ideaId = req.params.id;
-//     const { mentorId } = req.body; // mentor id selected by student
-//     const userId = req.user._id || req.user.id;
-
-//     // Ensure this project belongs to the student (lead or team member)
-//     const project = await ProjectIdea.findOne({
-//       _id: ideaId,
-//       $or: [{ "teamLead.id": userId }, { teamMembers: userId }],
-//     });
-
-//     if (!project) {
-//       return res.status(404).json({ success: false, message: "Project not found" });
-//     }
-
-//     if (project.status !== "interview_passed") {
-//       return res.status(400).json({
-//         success: false,
-//         message: "You can only select a mentor after passing the interview",
-//       });
-//     }
-
-//     project.mentor = mentorId;
-//     await project.save();
-
-//     // populate mentor info before returning
-//     await project.populate("mentor", "name email");
-
-//     res.status(200).json({ success: true, message: "Mentor selected", data: project });
-//   } catch (error) {
-//     console.error("Select Idea Mentor Error:", error);
-//     res.status(500).json({ success: false, message: "Server error" });
-//   }
-// };
 
 // ✅ Get student's assigned project only
 const getMyAssignedProject = async (req, res) => {
@@ -404,7 +377,7 @@ const getMyAssignedProject = async (req, res) => {
       .populate("approvedMentor", "name email")
       .populate("teamMembers", "name email rollno")
       .select(
-        "title description technology academicYear branch section group status approvedMentor teamMembers",
+        "title description technology academicYear branch section group status approvedMentor teamMembers"
       );
 
     if (!project) {
@@ -415,12 +388,17 @@ const getMyAssignedProject = async (req, res) => {
       });
     }
 
-    // ✅ Add mentor name for frontend
+    // 🔥 Fetch interview
+    const interview = await Interview.findOne({
+      idea: project._id,
+    });
+
     const responseProject = {
       ...project.toObject(),
       mentorName: project.approvedMentor
         ? project.approvedMentor.name
         : "Pending",
+      interview,
     };
 
     res.status(200).json({
@@ -715,37 +693,37 @@ const saveForm1 = async (req, res) => {
     const { formData = {}, submitType } = req.body;
 
     /// ---------------------------
-// 1️⃣ Find the project
-// ---------------------------
+    // 1️⃣ Find the project
+    // ---------------------------
 
-let project;
-let projectModel;
+    let project;
+    let projectModel;
 
-project = await AssignedProject.findOne({
-  $or: [{ "teamLead.id": studentId }, { teamMembers: studentId }],
-})
-  .populate("teamMembers", "name email")
-  .populate("teamLead.id", "name email")
-  .populate("approvedMentor", "name");
+    project = await AssignedProject.findOne({
+      $or: [{ "teamLead.id": studentId }, { teamMembers: studentId }],
+    })
+      .populate("teamMembers", "name email")
+      .populate("teamLead.id", "name email")
+      .populate("approvedMentor", "name");
 
-if (project) {
-  projectModel = "AssignedProject";
-} else {
-  project = await ProjectIdea.findOne({
-    $or: [{ "teamLead.id": studentId }, { teamMembers: studentId }],
-  })
-    .populate("teamMembers", "name email")
-    .populate("teamLead.id", "name email")
-    .populate("confirmedMentor", "name");
+    if (project) {
+      projectModel = "AssignedProject";
+    } else {
+      project = await ProjectIdea.findOne({
+        $or: [{ "teamLead.id": studentId }, { teamMembers: studentId }],
+      })
+        .populate("teamMembers", "name email")
+        .populate("teamLead.id", "name email")
+        .populate("confirmedMentor", "name");
 
-  projectModel = "ProjectIdea";
-}
+      projectModel = "ProjectIdea";
+    }
 
-if (!project) {
-  return res
-    .status(404)
-    .json({ success: false, message: "Project not found" });
-}
+    if (!project) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Project not found" });
+    }
 
     // ---------------------------
     // ⭐ Get mentor automatically
