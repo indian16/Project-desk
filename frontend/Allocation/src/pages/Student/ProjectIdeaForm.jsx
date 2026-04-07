@@ -78,7 +78,7 @@ const ProjectIdeaForm = ({ status }) => {
         academicYear: res.data?.academicYear || prev.academicYear,
       }));
     } catch (err) {
-      setError(err.message || "Submission failed");
+      setError(err.response?.data?.message || "Submission failed");
     }
   };
 

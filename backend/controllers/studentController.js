@@ -16,91 +16,8 @@ const Form3 = require("../models/Form3");
 const Student = require("../models/Student");
 const StudentForm3 = require("../models/StudentForm3");
 
-//const submitProjectIdeaForm = async (req, res) => {
-//   try {
-//     const { projectId, title, description, technology, teamMembers, mentor } =
-//       req.body;
-//     const userId = req.user._id || req.user.id;
-
-//     if (projectId && mentor) {
-//       // ✅ Update mentor only
-//       const project = await ProjectIdea.findById(projectId);
-//       if (!project)
-//         return res
-//           .status(404)
-//           .json({ success: false, message: "Project not found" });
-
-//       project.mentor = mentor;
-//       await project.save();
-
-//       return res.status(200).json({
-//         success: true,
-//         message: "Mentor updated successfully",
-//         data: project,
-//       });
-//     }
-
-//     // Validate fields for new project idea
-//     if (!title || !description || !technology || !teamMembers) {
-//       return res.status(400).json({
-//         success: false,
-//         message:
-//           "Title, description, technology, and team members are required",
-//       });
-//     }
-
-//     // Prevent duplicate submission
-//     const existingIdea = await ProjectIdea.findOne({
-//       $or: [{ "teamLead.id": userId }, { teamMembers: userId }],
-//     });
-//     const existingAssigned = await AssignedProject.findOne({
-//       $or: [{ student: userId }, { teamMembers: userId }],
-//     });
-
-//     if (existingIdea || existingAssigned) {
-//       return res.status(403).json({
-//         success: false,
-//         message: "You are already part of a submitted project (Idea or Bank)",
-//       });
-//     }
-
-//     const newIdea = new ProjectIdea({
-//       title,
-//       description,
-//       technology,
-//       teamMembers,
-//       teamLead: {
-//         id: userId,
-//         name: req.user.name,
-//         email: req.user.email,
-//       },
-//       academicYear: req.user.academicYear,
-//       branch: req.user.branch,
-//       section: req.user.section,
-//       group: req.user.group,
-//       status: "pending",
-//       mentor: mentor || null,
-//     });
-
-//     await newIdea.save();
-
-//     res.status(201).json({
-//       success: true,
-//       message: "Project Idea submitted successfully",
-//       data: newIdea,
-//     });
-//   } catch (error) {
-//     console.error("Submit Project Idea Error:", error);
-//     res.status(500).json({
-//       success: false,
-//       message: "Failed to submit project idea",
-//       error: error.message,
-//     });
-//   }
-// };
 
 // ✅ Submit project from Project Bank
-
 const submitProjectIdeaForm = async (req, res) => {
   try {
     const {
@@ -247,7 +164,7 @@ const submitProjectBankForm = async (req, res) => {
 
     // ❗ Check if student already part of another project
     const existingIdea = await ProjectIdea.findOne({
-      $or: [{ "teamLead.id": userId }, { team: userId }],
+      $or: [{ "teamLead.id": userId }, { teamMembers: userId }],
     });
 
     const existingAssigned = await AssignedProject.findOne({
@@ -366,6 +283,7 @@ const getMyIdeaProject = async (req, res) => {
   }
 };
 
+
 // ✅ Get student's assigned project only
 const getMyAssignedProject = async (req, res) => {
   try {
@@ -377,7 +295,7 @@ const getMyAssignedProject = async (req, res) => {
       .populate("approvedMentor", "name email")
       .populate("teamMembers", "name email rollno")
       .select(
-        "title description technology academicYear branch section group status approvedMentor teamMembers"
+        "title description technology academicYear branch section group status approvedMentor teamMembers",
       );
 
     if (!project) {
@@ -388,17 +306,12 @@ const getMyAssignedProject = async (req, res) => {
       });
     }
 
-    // 🔥 Fetch interview
-    const interview = await Interview.findOne({
-      idea: project._id,
-    });
-
+    // ✅ Add mentor name for frontend
     const responseProject = {
       ...project.toObject(),
       mentorName: project.approvedMentor
         ? project.approvedMentor.name
         : "Pending",
-      interview,
     };
 
     res.status(200).json({

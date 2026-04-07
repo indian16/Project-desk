@@ -827,38 +827,50 @@ const getAllProjectsCount = async (req, res) => {
 
 const getUpcomingInterview = async (req, res) => {
   try {
-    // Fetch only interviews that have valid idea reference
-    const upcoming = await Interview.findOne({}).sort({ date: 1 }).lean();
+    const today = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
 
-    if (!upcoming) {
-      return res.status(200).json(null);
-    }
+    // Fetch all upcoming interviews
+    const interviews = await Interview.find({
+      date: { $gte: today },
+    })
 
-    // Fetch project idea details
-    const idea = await ProjectIdea.findById(upcoming.idea)
-
+      .sort({ date: 1 })
       .lean();
 
-    return res.status(200).json({
-      _id: upcoming._id,
-      date: upcoming.date,
-      time: upcoming.time,
-      location: upcoming.location,
-      notes: upcoming.notes,
+    if (!interviews.length) {
+      return res.status(200).json([]);
+    }
 
-      idea: idea
-        ? {
-            title: idea.title,
-            description: idea.description,
-            technology: idea.technology,
-            teamLead: idea.teamLead,
-            teamMembers: idea.teamMembers,
-          }
-        : null,
-    });
+    // Attach idea details
+
+    const result = await Promise.all(
+      interviews.map(async (interview) => {
+        const idea = await ProjectIdea.findById(interview.idea).lean();
+
+        return {
+          _id: interview._id,
+          date: interview.date,
+          time: interview.time,
+          location: interview.location,
+          notes: interview.notes,
+          idea: idea
+            ? {
+                title: idea.title,
+                description: idea.description,
+                technology: idea.technology,
+                teamLead: idea.teamLead,
+                teamMembers: idea.teamMembers,
+              }
+            : null,
+        };
+      }),
+    );
+
+    res.status(200).json(result);
   } catch (err) {
     console.error("Error in getUpcomingInterview:", err);
-    return res.status(500).json({ error: "Server error" });
+
+    res.status(500).json({ error: "Server error" });
   }
 };
 
@@ -903,7 +915,6 @@ const getSummaryCounts = async (req, res) => {
 // ======================================
 const getAllProjectsCombined = async (req, res) => {
   try {
-
     // ===========================
     // PROJECT IDEAS
     // ===========================
@@ -934,7 +945,7 @@ const getAllProjectsCombined = async (req, res) => {
       mentors: {
         mentor1: i.selectedMentor1,
         mentor2: i.selectedMentor2,
-        mentor3: i.selectedMentor3
+        mentor3: i.selectedMentor3,
       },
 
       confirmedMentor: i.confirmedMentor,
@@ -947,7 +958,7 @@ const getAllProjectsCombined = async (req, res) => {
       section: i.section,
       group: i.group,
 
-      feedbacks: i.feedbacks
+      feedbacks: i.feedbacks,
     }));
 
     // ===========================
@@ -981,7 +992,7 @@ const getAllProjectsCombined = async (req, res) => {
       mentors: {
         mentor1: a.selectedMentor1,
         mentor2: a.selectedMentor2,
-        mentor3: a.selectedMentor3
+        mentor3: a.selectedMentor3,
       },
 
       approvedMentor: a.approvedMentor,
@@ -994,7 +1005,7 @@ const getAllProjectsCombined = async (req, res) => {
       section: a.section,
       group: a.group,
 
-      feedbacks: a.feedbacks
+      feedbacks: a.feedbacks,
     }));
 
     // ===========================
@@ -1005,13 +1016,12 @@ const getAllProjectsCombined = async (req, res) => {
     res.json({
       success: true,
       total: allProjects.length,
-      projects: allProjects
+      projects: allProjects,
     });
-
   } catch (err) {
     res.status(500).json({
       success: false,
-      message: err.message
+      message: err.message,
     });
   }
 };
@@ -1203,11 +1213,10 @@ const getProjectFormForHead = async (req, res) => {
     }
 
     if (formType === "form2") {
-      formData = await Form2.findOne({ projectId })
-        .populate(
-          "members.studentId",
-          "name email rollNo branch section group academicYear"
-        );
+      formData = await Form2.findOne({ projectId }).populate(
+        "members.studentId",
+        "name email rollNo branch section group academicYear",
+      );
     }
 
     if (formType === "form3") {

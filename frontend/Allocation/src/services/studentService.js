@@ -40,9 +40,7 @@ export const submitProjectBankForm = async (formData) => {
     return res.data.data;
   } catch (error) {
     console.error("Error submitting project bank form:", error);
-    throw new Error(
-      error.response?.data?.message || "Failed to submit project bank form",
-    );
+    throw error;
   }
 };
 
